@@ -1,0 +1,278 @@
+[
+  {
+    "slug": "belize",
+    "nombre": "Belize",
+    "region": "Atlantic Ocean",
+    "fecha": "2026-05-14",
+    "coordenadas": {
+      "lat": 17.025,
+      "lon": -88.075
+    },
+    "datos": {
+      "sst_max": 30.88,
+      "sst_min": 28.6,
+      "dhw": 0.3286,
+      "stress_level": 2,
+      "bleaching_threshold": 29.866,
+      "baa_7day_max": 2
+    },
+    "viento": {
+      "velocidad_kmh": 27.3,
+      "direccion_grados": 86,
+      "direccion_cardinal": "E",
+      "rafagas_kmh": 35.6,
+      "condicion": "moderado"
+    },
+    "tendencia": {
+      "sst_pendiente_diaria": 0.065,
+      "dhw_pendiente_diaria": 0.0548,
+      "sst_delta_7d": 0.39,
+      "dhw_delta_7d": 0.3286,
+      "sst_serie": [
+        "30.49",
+        "30.44",
+        "30.52",
+        "30.56",
+        "30.60",
+        "30.72",
+        "30.88"
+      ],
+      "dhw_serie": [
+        "0.0000",
+        "0.0000",
+        "0.0000",
+        "0.0000",
+        "0.0000",
+        "0.1500",
+        "0.3286"
+      ],
+      "fechas": [
+        "2026-05-08",
+        "2026-05-09",
+        "2026-05-10",
+        "2026-05-11",
+        "2026-05-12",
+        "2026-05-13",
+        "2026-05-14"
+      ]
+    },
+    "interanual": {
+      "dhw_mayo_2023": 0.65,
+      "dhw_actual": 0.3286,
+      "delta": -0.3214
+    },
+    "predictions": {
+      "blanqueamiento": "El umbral ya fue cruzado hace 2 días (2026-05-13). Con la tendencia actual de +0.065°C/día, en 15 días la SST podría alcanzar 31.86°C, acumulando DHW cercano a 2.0, nivel crítico para blanqueamiento moderado.",
+      "pesca": "Salida recomendada: 5:30-6:00 AM antes que el viento E aumente. Navegar hacia el oeste de Hol Chan (sotavento), profundidad 8-12 metros en zonas de pastos marinos adyacentes al canal. Probabilidad alta de avistar Tortuga Carey alimentándose de esponjas en parches coralinos entre 10-15 metros.",
+      "salud": "Actualmente DHW 0.33 vs. DHW 12.8 en octubre 2023 (peor momento). Estamos 38.9 veces por debajo del pico histórico que causó 40-90% pérdida coralina. Sin embargo, la acumulación comenzó hace solo 2 días; si continúa 11 semanas más a este ritmo, alcanzaríamos niveles de alerta severa (DHW >4.0).",
+      "alerta": "Hermano pescador de Belize: el arrecife Hol Chan ya entró en estrés térmico con DHW subiendo rápido, las Tortugas Carey que buscan esponjas en el canal están en hábitat vulnerable. Evita anclar en coral vivo y reporta cualquier blanqueamiento que veas en tus faenas."
+    }
+  },
+  {
+    "slug": "honduras",
+    "nombre": "Honduras",
+    "region": "Atlantic Ocean",
+    "fecha": "2026-05-14",
+    "coordenadas": {
+      "lat": 16.7,
+      "lon": -85.85
+    },
+    "datos": {
+      "sst_max": 30.45,
+      "sst_min": 27.74,
+      "dhw": 0,
+      "stress_level": 1,
+      "bleaching_threshold": 29.87,
+      "baa_7day_max": 1
+    },
+    "viento": {
+      "velocidad_kmh": 37.1,
+      "direccion_grados": 89,
+      "direccion_cardinal": "E",
+      "rafagas_kmh": 46.4,
+      "condicion": "fuerte"
+    },
+    "tendencia": {
+      "sst_pendiente_diaria": 0.0617,
+      "dhw_pendiente_diaria": 0,
+      "sst_delta_7d": 0.37,
+      "dhw_delta_7d": 0,
+      "sst_serie": [
+        "30.08",
+        "30.04",
+        "30.14",
+        "30.18",
+        "30.16",
+        "30.37",
+        "30.45"
+      ],
+      "dhw_serie": [
+        "0.0000",
+        "0.0000",
+        "0.0000",
+        "0.0000",
+        "0.0000",
+        "0.0000",
+        "0.0000"
+      ],
+      "fechas": [
+        "2026-05-08",
+        "2026-05-09",
+        "2026-05-10",
+        "2026-05-11",
+        "2026-05-12",
+        "2026-05-13",
+        "2026-05-14"
+      ]
+    },
+    "interanual": {
+      "dhw_mayo_2023": 0.83,
+      "dhw_actual": 0,
+      "delta": -0.83
+    },
+    "predictions": {
+      "blanqueamiento": "El umbral ya está superado por 0.58°C. Con la tendencia de +0.0617°C/día, en 7 días la SST alcanzará 30.88°C, acumulando estrés térmico sostenido. Si continúa esta tasa, en aproximadamente 14-16 días podríamos alcanzar DHW de 1.0, iniciando blanqueamiento moderado.",
+      "pesca": "Salida recomendada: 5:00-6:00 AM antes que intensifique el viento del Este. Pescar del lado oeste de Cordelia Banks a 15-25 metros de profundidad, usando el arrecife como barrera contra viento E de 37.1 km/h. Especies probables: pargo cubera, mero rojo y cherna criolla (Mero Nassau en veda, protegido). Retornar antes de 2:00 PM por seguridad.",
+      "salud": "Actualmente estamos en condición estable con DHW 0.0 versus el peor momento histórico de octubre 2023 (DHW 12.8 y pérdida de 40-90% de cobertura). Estamos 12.8 unidades DHW por debajo de ese escenario crítico. Sin embargo, la SST ya supera el umbral por 0.58°C y sube 0.06°C diariamente, indicando entrada temprana a temporada de estrés térmico comparado con mayo 2023 (DHW 0.83).",
+      "alerta": "Hermano pescador de Honduras: el Cordelia Banks ya superó su umbral de blanqueamiento y la temperatura sube cada día, poniendo en riesgo el refugio del Mero Nassau y otros peces que alimentan a nuestras familias. Protejamos las zonas de reproducción ahora que aún estamos lejos del desastre de octubre 2023."
+    }
+  },
+  {
+    "slug": "nicaragua",
+    "nombre": "Nicaragua",
+    "region": "Atlantic Ocean",
+    "fecha": "2026-05-14",
+    "coordenadas": {
+      "lat": 14.125,
+      "lon": -81.75
+    },
+    "datos": {
+      "sst_max": 29.89,
+      "sst_min": 28.25,
+      "dhw": 2.1543,
+      "stress_level": 2,
+      "bleaching_threshold": 29.4117,
+      "baa_7day_max": 2
+    },
+    "viento": {
+      "velocidad_kmh": 35.5,
+      "direccion_grados": 74,
+      "direccion_cardinal": "E",
+      "rafagas_kmh": 46.8,
+      "condicion": "fuerte"
+    },
+    "tendencia": {
+      "sst_pendiente_diaria": 0.0067,
+      "dhw_pendiente_diaria": 0.1591,
+      "sst_delta_7d": 0.04,
+      "dhw_delta_7d": 0.9543,
+      "sst_serie": [
+        "29.85",
+        "29.88",
+        "29.95",
+        "29.95",
+        "29.89",
+        "29.80",
+        "29.89"
+      ],
+      "dhw_serie": [
+        "1.2000",
+        "1.3586",
+        "1.5243",
+        "1.6871",
+        "1.8486",
+        "1.9986",
+        "2.1543"
+      ],
+      "fechas": [
+        "2026-05-08",
+        "2026-05-09",
+        "2026-05-10",
+        "2026-05-11",
+        "2026-05-12",
+        "2026-05-13",
+        "2026-05-14"
+      ]
+    },
+    "interanual": {
+      "dhw_mayo_2023": 0.41,
+      "dhw_actual": 2.1543,
+      "delta": 1.7443
+    },
+    "predictions": {
+      "blanqueamiento": "El umbral ya fue cruzado hace días. La SST actual de 29.89°C está 0.48°C por encima del umbral de 29.41°C. Si la tendencia de +0.0067°C/día continúa, en 30 días la SST alcanzará 30.09°C, acumulando DHW cercano a 4.0, entrando en zona de mortalidad significativa.",
+      "pesca": "Salida recomendada: 4:30-5:00 AM antes de que intensifiquen los vientos del Este. Pescar entre 8-15 metros de profundidad en zonas protegidas al OESTE de los cayos (sotavento del viento E). Con viento E a 35.5 km/h, buscar Langosta Espinosa en arrecifes someros del lado occidental, o Pargo Seda en profundidades de 12-18 metros.",
+      "salud": "Estamos en etapa temprana de estrés térmico. El DHW actual de 2.15 representa apenas el 17% del peor momento histórico (DHW 12.8 en octubre 2023). Sin embargo, la velocidad de acumulación es alarmante: en solo 7 días subió de 1.20 a 2.15. Si esta tasa continúa (0.136 DHW/día), en 78 días alcanzaríamos el nivel catastrófico de octubre 2023.",
+      "alerta": "Hermano pescador de Nicaragua: el arrecife de Miskito Cays ya está en estrés térmico nivel 2 con DHW 2.15, amenazando el hábitat de la Langosta Espinosa que sostiene tu familia. Si sigue subiendo como en octubre 2023, perderemos hasta 90% del coral que protege tu pesquería."
+    }
+  },
+  {
+    "slug": "quintana_roo",
+    "nombre": "Quintana Roo, Mexico",
+    "region": "Atlantic Ocean",
+    "fecha": "2026-05-14",
+    "coordenadas": {
+      "lat": 19.925,
+      "lon": -87.4
+    },
+    "datos": {
+      "sst_max": 30.26,
+      "sst_min": 27.93,
+      "dhw": 0,
+      "stress_level": 1,
+      "bleaching_threshold": 29.7392,
+      "baa_7day_max": 1
+    },
+    "viento": {
+      "velocidad_kmh": 22.9,
+      "direccion_grados": 112,
+      "direccion_cardinal": "E",
+      "rafagas_kmh": 52.9,
+      "condicion": "moderado"
+    },
+    "tendencia": {
+      "sst_pendiente_diaria": 0.1,
+      "dhw_pendiente_diaria": 0,
+      "sst_delta_7d": 0.6,
+      "dhw_delta_7d": 0,
+      "sst_serie": [
+        "29.66",
+        "29.77",
+        "29.75",
+        "29.73",
+        "29.81",
+        "30.00",
+        "30.26"
+      ],
+      "dhw_serie": [
+        "0.0000",
+        "0.0000",
+        "0.0000",
+        "0.0000",
+        "0.0000",
+        "0.0000",
+        "0.0000"
+      ],
+      "fechas": [
+        "2026-05-08",
+        "2026-05-09",
+        "2026-05-10",
+        "2026-05-11",
+        "2026-05-12",
+        "2026-05-13",
+        "2026-05-14"
+      ]
+    },
+    "interanual": {
+      "dhw_mayo_2023": 0.92,
+      "dhw_actual": 0,
+      "delta": -0.92
+    },
+    "predictions": {
+      "blanqueamiento": "El umbral ya fue cruzado hace 1 día (el 2026-05-13). Con la tendencia actual de +0.1°C/día, la SST alcanzará 30.5°C en 2-3 días. Si continúa este ritmo, en 7-10 días podríamos acumular DHW significativos (>1), iniciando estrés térmico sostenido que provoca blanqueamiento visible en colonias de Acropora palmata y Orbicella faveolata.",
+      "pesca": "Salida recomendada: 5:30-6:00 AM desde Mahahual. Navega hacia el sector noreste de Banco Chinchorro (protegido del viento E), profundidad 8-15 metros en zonas de parche coralino. Con viento E a 22.9 km/h, trabaja la cara oeste del atolón donde hay menos oleaje. Pez Loro Gigante (Bolbometopon muricatum) se concentra en arrecifes someros (5-12m) alimentándose de algas sobre coral muerto; también encuentra Mero del Caribe y Pargo Cubera en cañones de 18-25 metros.",
+      "salud": "Actualmente estamos en estado favorable: DHW 0 versus el catastrófico DHW 12.8 de octubre 2023 que causó 40-90% de mortalidad coralina. Estamos a 12.8 unidades DHW de distancia de ese peor escenario. Sin embargo, la SST ya superó el umbral (30.26°C vs 29.74°C), y con la tendencia ascendente de +0.1°C/día, si se mantiene 4-6 semanas más podríamos acumular DHW 4-8, entrando en zona de blanqueamiento moderado (30-50% de las colonias afectadas), especialmente en especies sensibles como Acropora cervicornis.",
+      "alerta": "Hermano pescador de Quintana Roo, el agua en Banco Chinchorro ya rebasa los 30°C y sigue subiendo cada día; si esto continúa 3-4 semanas más, veremos blanqueamiento que amenaza el hábitat del Pez Loro Gigante y tu sustento. Monitorea cambios de color en los corales y reporta al CONANP si ves colonias pálidas en tus zonas de pesca."
+    }
+  }
+]
