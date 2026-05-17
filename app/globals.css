@@ -1,29 +1,32 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
 
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Deep ocean dark theme */
-  --background: oklch(0.12 0.015 230);
-  --foreground: oklch(0.93 0.01 220);
-  --card: oklch(0.16 0.015 230);
-  --card-foreground: oklch(0.93 0.01 220);
-  --popover: oklch(0.16 0.015 230);
-  --popover-foreground: oklch(0.93 0.01 220);
-  --primary: oklch(0.65 0.15 190);
-  --primary-foreground: oklch(0.12 0.015 230);
-  --secondary: oklch(0.22 0.02 230);
-  --secondary-foreground: oklch(0.85 0.01 220);
-  --muted: oklch(0.20 0.015 230);
-  --muted-foreground: oklch(0.60 0.02 220);
-  --accent: oklch(0.25 0.025 230);
-  --accent-foreground: oklch(0.93 0.01 220);
-  --destructive: oklch(0.55 0.22 25);
-  --destructive-foreground: oklch(0.93 0.01 220);
-  --border: oklch(0.25 0.02 230);
-  --input: oklch(0.22 0.02 230);
-  --ring: oklch(0.65 0.15 190);
+  /* Industrial scientific dark theme — #020617 / #070a13 base */
+  --background: #020617;
+  --foreground: #cbd5e1;
+  --card: #070a13;
+  --card-foreground: #cbd5e1;
+  --popover: #070a13;
+  --popover-foreground: #cbd5e1;
+  /* desaturated emerald — scientific, not neon */
+  --primary: #34d399;
+  --primary-foreground: #020617;
+  --secondary: #0f172a;
+  --secondary-foreground: #94a3b8;
+  --muted: #0f172a;
+  --muted-foreground: #475569;
+  --accent: #0f172a;
+  --accent-foreground: #cbd5e1;
+  --destructive: #ef4444;
+  --destructive-foreground: #cbd5e1;
+  /* ultra-thin dividers */
+  --border: #1e293b;
+  --input: #0f172a;
+  --ring: #34d399;
 
   /* Custom dashboard tokens */
   --reef-healthy: oklch(0.65 0.19 145);
@@ -51,7 +54,7 @@
 
 @theme inline {
   --font-sans: 'Geist', 'Geist Fallback';
-  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
+  --font-mono: 'JetBrains Mono', 'Geist Mono', 'Geist Mono Fallback', monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);

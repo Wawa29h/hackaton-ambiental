@@ -3,104 +3,83 @@
 import { Clock } from "lucide-react"
 
 const TIMELINE_DATA = [
-  {
-    year: "1970",
-    cover: "46%",
-    event: "Cobertura coralina máxima registrada en el Caribe",
-    status: "healthy" as const,
-  },
-  {
-    year: "1983",
-    cover: "35%",
-    event: "Primer evento de blanqueamiento masivo y mortalidad de Diadema antillarum",
-    status: "stress" as const,
-  },
-  {
-    year: "1998",
-    cover: "22%",
-    event: "El Niño: blanqueamiento global sin precedentes — pérdida del 16% en un año",
-    status: "bleaching" as const,
-  },
-  {
-    year: "2005",
-    cover: "15%",
-    event: "Temporada récord de DHW en el Caribe. Blanqueamiento en Belice y Honduras",
-    status: "bleaching" as const,
-  },
-  {
-    year: "2010",
-    cover: "12%",
-    event: "Declive continuo agravado por enfermedades coralinas (SCTLD emergente)",
-    status: "stress" as const,
-  },
-  {
-    year: "2023",
-    cover: "8%",
-    event: "Temperatura oceánica récord global. Blanqueamiento masivo reportado en SAM",
-    status: "bleaching" as const,
-  },
-  {
-    year: "2026",
-    cover: "~5%",
-    event: "Proyección actual — nivel crítico. Esfuerzos de restauración insuficientes",
-    status: "bleaching" as const,
-  },
+  { year: "1970", cover: "46%", event: "Cobertura coralina máxima registrada en el Caribe",                             status: "healthy"   as const },
+  { year: "1983", cover: "35%", event: "Primer blanqueamiento masivo — mortalidad de Diadema antillarum",                status: "stress"    as const },
+  { year: "1998", cover: "22%", event: "El Niño: blanqueamiento global sin precedentes — pérdida del 16% en un año",     status: "bleaching" as const },
+  { year: "2005", cover: "15%", event: "Temporada récord de DHW en el Caribe: Belice y Honduras afectados",              status: "bleaching" as const },
+  { year: "2010", cover: "12%", event: "Declive continuo agravado por enfermedades coralinas (SCTLD emergente)",         status: "stress"    as const },
+  { year: "2023", cover:  "8%", event: "Temperatura oceánica récord global — blanqueamiento masivo en SAM",              status: "bleaching" as const },
+  { year: "2026", cover: "~5%", event: "Proyección actual — nivel crítico. Esfuerzos de restauración insuficientes",     status: "bleaching" as const },
 ]
 
-const STATUS_DOT = {
-  healthy: "bg-reef-healthy border-reef-healthy/30 shadow-[0_0_8px_var(--reef-healthy)]",
-  stress: "bg-reef-stress border-reef-stress/30 shadow-[0_0_8px_var(--reef-stress)]",
-  bleaching: "bg-reef-bleaching border-reef-bleaching/30 shadow-[0_0_8px_var(--reef-bleaching)]",
+const STATUS_CFG = {
+  healthy:   { dot: "bg-emerald-400", line: "border-emerald-500/30", year: "text-emerald-400" },
+  stress:    { dot: "bg-amber-400",   line: "border-amber-500/30",   year: "text-amber-400"   },
+  bleaching: { dot: "bg-red-400",     line: "border-red-500/30",     year: "text-red-400"     },
 }
 
-export default function CoralTimeline() {
+interface CoralTimelineProps {
+  interanual?: any
+}
+
+export default function CoralTimeline({ interanual }: CoralTimelineProps) {
   return (
-    <div className="rounded-lg border border-border bg-card p-4">
-      <div className="flex items-center gap-2 mb-4">
-        <Clock className="h-4 w-4 text-muted-foreground" />
-        <h3 className="text-sm font-semibold text-foreground">
-          Declive Histórico del Coral Caribeño
-        </h3>
+    <div className="border border-slate-800 bg-[#070a13]">
+      {/* header */}
+      <div className="flex items-center gap-3 border-b border-slate-800 px-4 py-3">
+        <Clock className="h-3.5 w-3.5 text-slate-600" />
+        <span className="font-mono text-[11px] font-semibold tracking-[0.12em] uppercase text-slate-200">
+          Declive Histórico
+        </span>
+        <div className="flex-1 h-px bg-slate-800" />
+        <span className="font-mono text-[9px] text-slate-600 tracking-widest">CARIBE · 1970–2026</span>
       </div>
 
-      <div className="relative ml-3">
-        {/* Vertical line */}
-        <div className="absolute left-[5px] top-0 bottom-0 w-px bg-border" />
+      <div className="px-4 py-3">
+        <div className="relative ml-2">
+          {/* vertical rail */}
+          <div className="absolute left-[4px] top-0 bottom-0 w-px bg-slate-800" />
 
-        <div className="space-y-4">
-          {TIMELINE_DATA.map((item, i) => (
-            <div key={item.year} className="relative flex gap-4 pl-6">
-              {/* Dot on line */}
-              <div
-                className={`absolute left-0 top-1 h-[11px] w-[11px] rounded-full border ${STATUS_DOT[item.status]}`}
-              />
+          <div className="space-y-3">
+            {TIMELINE_DATA.map((item) => {
+              const cfg = STATUS_CFG[item.status]
+              return (
+                <div key={item.year} className="relative flex gap-4 pl-5">
+                  {/* dot */}
+                  <div className={`absolute left-0 top-[5px] h-2 w-2 ${cfg.dot} rounded-none`} />
 
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-bold text-foreground font-mono">{item.year}</span>
-                  <div className="flex items-center gap-1 rounded-full bg-secondary/60 px-2 py-0.5">
-                    <span className="text-[10px] font-semibold text-foreground">{item.cover}</span>
-                    <span className="text-[10px] text-muted-foreground">cobertura</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-3 mb-0.5">
+                      <span className={`font-mono text-[11px] font-bold ${cfg.year}`}>
+                        {item.year}
+                      </span>
+                      <div className={`border ${cfg.line} px-1.5 py-0.5`}>
+                        <span className="font-mono text-[9px] text-slate-300">{item.cover}</span>
+                      </div>
+                    </div>
+                    <p className="font-mono text-[10px] leading-relaxed text-slate-500">
+                      {item.event}
+                    </p>
                   </div>
                 </div>
-                <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{item.event}</p>
-              </div>
-            </div>
-          ))}
+              )
+            })}
+          </div>
         </div>
-      </div>
 
-      {/* Bottom bar visual */}
-      <div className="mt-4 flex items-center gap-2 rounded-md bg-secondary/40 px-3 py-2">
-        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-secondary">
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-reef-healthy via-reef-stress to-reef-bleaching"
-            style={{ width: "89%" }}
-          />
+        {/* degradation bar */}
+        <div className="mt-4 border-t border-slate-800 pt-3">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="font-mono text-[9px] text-slate-600 tracking-widest uppercase">Pérdida acumulada</span>
+            <span className="font-mono text-[10px] font-bold text-red-400">89%</span>
+          </div>
+          <div className="h-1 bg-slate-800 w-full">
+            <div
+              className="h-full bg-gradient-to-r from-emerald-500 via-amber-500 to-red-500"
+              style={{ width: "89%" }}
+            />
+          </div>
         </div>
-        <span className="text-[10px] font-mono text-muted-foreground whitespace-nowrap">
-          89% pérdida desde 1970
-        </span>
       </div>
     </div>
   )
