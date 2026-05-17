@@ -16,12 +16,13 @@ const CREADORES = {
   Diploria:      crearDiploria,
 }
 
-// Mirrors the floor vertex displacement (no random term) so corals can anchor to it
-function getFloorY(x, z) {
-  return -2.5 +
+// PlaneGeometry lies in the local XY plane — local Z is 0 for every vertex when
+// the displacement formula ran, so cos(z*0.3)=1 and sin((x+z)*0.18)=sin(x*0.18).
+// Floor height therefore only varies with world X (local X is preserved under rotation.x).
+function getFloorY(x) {
+  return -2.0 +
     Math.sin(x * 0.25) * 0.6 +
-    Math.cos(z * 0.3)  * 0.5 +
-    Math.sin((x + z) * 0.18) * 0.8
+    Math.sin(x * 0.18) * 0.8
 }
 
 function crearSueloMarino() {
@@ -63,7 +64,7 @@ function crearRocas(scene) {
     const mesh = new THREE.Mesh(geo, mat)
     const rx = (Math.random() - 0.5) * 36
     const rz = (Math.random() - 0.5) * 24
-    mesh.position.set(rx, getFloorY(rx, rz) + r * 0.3, rz)
+    mesh.position.set(rx, getFloorY(rx) + r * 0.3, rz)
     mesh.rotation.y = Math.random() * Math.PI
     scene.add(mesh)
   }
@@ -191,7 +192,7 @@ export default function ReefViewer({ zone, dhw, especies: especiesProp }) {
       const coral = crear(x, z, dhw)
 
       // Anchor to the deterministic floor surface — no more floating
-      coral.position.y += getFloorY(x, z)
+      coral.position.y += getFloorY(x)
 
       const esRamificado = especieId === 'Pocillopora' || especieId === 'Acropora'
       coral.userData.ampOscilacion = esRamificado ? 0.07 : 0.025
