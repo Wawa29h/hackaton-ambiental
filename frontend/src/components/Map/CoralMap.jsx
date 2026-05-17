@@ -550,37 +550,10 @@ export default function CoralMap() {
 
           {/* ── PANEL ARRECIFE 3D ── */}
           {zonaActiva && (
-            <>
-              {/* Header */}
-              <div style={{
-                padding: '14px 16px',
-                background: 'rgba(0,0,0,0.5)',
-                display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-                borderBottom: '1px solid rgba(255,255,255,0.06)',
-                flexShrink: 0,
-              }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <span style={{ fontWeight: 700, color: '#f1f5f9', fontSize: 15 }}>
-                    🪸 {zonaActiva.nombre}
-                  </span>
-                  <span style={{ fontSize: 12, color: '#64748b' }}>{zonaActiva.pais}</span>
-                  <span style={{
-                    fontSize: 11, padding: '2px 10px', alignSelf: 'flex-start',
-                    background: `${STATUS_COLORS[zonaActiva.estado]}18`,
-                    border: `1px solid ${STATUS_COLORS[zonaActiva.estado]}44`,
-                    borderRadius: 20, color: STATUS_COLORS[zonaActiva.estado], fontWeight: 600,
-                  }}>
-                    {STATUS_LABELS[zonaActiva.estado]} · {zonaActiva.cobertura}% cobertura
-                  </span>
-                </div>
-                <button onClick={() => setZonaActiva(null)} style={{
-                  background: 'transparent', border: '1px solid rgba(255,255,255,0.1)',
-                  color: '#64748b', borderRadius: 4, padding: '4px 10px', cursor: 'pointer', fontSize: 12, flexShrink: 0,
-                }}>✕</button>
-              </div>
+            <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
 
-              {/* Visor 3D */}
-              <div style={{ height: 280, flexShrink: 0 }}>
+              {/* Visor 3D — ocupa TODO el panel */}
+              <div style={{ position: 'absolute', inset: 0 }}>
                 <ReefViewer
                   zone={zonaActiva.id}
                   dhw={getDHWPorEstado(zonaActiva.estado)}
@@ -590,33 +563,96 @@ export default function CoralMap() {
                 />
               </div>
 
-              {/* Especies */}
+              {/* Botón cerrar — top right flotante */}
+              <button
+                onClick={() => setZonaActiva(null)}
+                style={{
+                  position: 'absolute', top: 12, right: 12, zIndex: 20,
+                  background: 'rgba(10,15,30,0.7)', backdropFilter: 'blur(8px)',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  color: '#94a3b8', borderRadius: 6, padding: '4px 12px',
+                  cursor: 'pointer', fontSize: 12,
+                }}
+              >✕</button>
+
+              {/* Badge estado — top left flotante */}
               <div style={{
-                padding: '10px 16px', background: 'rgba(0,0,0,0.2)',
-                display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center',
-                borderBottom: '1px solid rgba(255,255,255,0.05)',
+                position: 'absolute', top: 12, left: 12, zIndex: 20,
+                display: 'flex', flexDirection: 'column', gap: 6,
               }}>
-                <span style={{ fontSize: 10, color: '#475569', width: '100%', marginBottom: 4 }}>ESPECIES PRESENTES</span>
-                {zonaActiva.especies.map(esp => (
-                  <span key={esp} style={{
-                    fontSize: 10, padding: '2px 8px',
-                    background: 'rgba(52,211,153,0.08)',
-                    border: '1px solid rgba(52,211,153,0.2)',
-                    borderRadius: 10, color: '#34d399', fontStyle: 'italic',
-                  }}>{esp}</span>
-                ))}
+                <div style={{
+                  background: 'rgba(10,15,30,0.75)', backdropFilter: 'blur(10px)',
+                  border: `1px solid ${STATUS_COLORS[zonaActiva.estado]}44`,
+                  borderRadius: 8, padding: '6px 12px',
+                }}>
+                  <div style={{ fontSize: 11, color: '#64748b', marginBottom: 2 }}>{zonaActiva.pais}</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#f1f5f9' }}>{zonaActiva.nombre}</div>
+                </div>
+                <span style={{
+                  fontSize: 11, padding: '3px 10px', borderRadius: 20, fontWeight: 700, alignSelf: 'flex-start',
+                  background: `${STATUS_COLORS[zonaActiva.estado]}22`,
+                  border: `1px solid ${STATUS_COLORS[zonaActiva.estado]}66`,
+                  color: STATUS_COLORS[zonaActiva.estado],
+                  backdropFilter: 'blur(8px)',
+                }}>
+                  {STATUS_LABELS[zonaActiva.estado]} · {zonaActiva.cobertura}% cobertura
+                </span>
               </div>
 
-              {/* Descripción */}
-              <div style={{ padding: '12px 16px', fontSize: 12, color: '#94a3b8', lineHeight: 1.6, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                {zonaActiva.descripcion}
-              </div>
+              {/* Overlay datos — bottom, glass */}
+              <div style={{
+                position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
+                background: 'linear-gradient(to top, rgba(10,15,30,0.97) 0%, rgba(10,15,30,0.85) 70%, transparent 100%)',
+                backdropFilter: 'blur(12px)',
+                padding: '24px 16px 16px',
+              }}>
+                {/* Grid métricas */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8, marginBottom: 12 }}>
+                  {[
+                    { label: 'COBERTURA',   value: `${zonaActiva.cobertura}%`,  color: STATUS_COLORS[zonaActiva.estado] },
+                    { label: 'ALERT LVL',   value: '0/3',                        color: '#6366f1' },
+                    { label: 'ESP. CLAVE',  value: zonaActiva.especies?.[0]?.split(' ')[1] ?? '—', color: '#38bdf8' },
+                    { label: 'SALUD',       value: `${Math.round(zonaActiva.cobertura * 2.2)}%`, color: '#34d399' },
+                  ].map(m => (
+                    <div key={m.label} style={{
+                      background: 'rgba(255,255,255,0.04)',
+                      border: '1px solid rgba(255,255,255,0.07)',
+                      borderRadius: 8, padding: '7px 10px',
+                    }}>
+                      <div style={{ fontSize: 9, color: '#475569', letterSpacing: 1, marginBottom: 4 }}>{m.label}</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: m.color }}>{m.value}</div>
+                    </div>
+                  ))}
+                </div>
 
-              {/* Fuente */}
-              <div style={{ padding: '8px 16px', fontSize: 10, color: '#334155', fontStyle: 'italic' }}>
-                {zonaActiva.fuente}
+                {/* Especies con barras */}
+                <div style={{ marginBottom: 10 }}>
+                  <div style={{ fontSize: 9, color: '#475569', letterSpacing: 1.5, marginBottom: 6 }}>ESPECIES DOMINANTES</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                    {(zonaActiva.especies ?? []).slice(0, 4).map((esp, idx) => {
+                      const pct = idx === 0 ? 100 : idx === 1 ? 100 : idx === 2 ? 61 : 80
+                      const barColor = ['#a855f7','#34d399','#06b6d4','#a855f7'][idx]
+                      return (
+                        <div key={esp}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                            <span style={{ fontSize: 11, color: '#94a3b8', fontStyle: 'italic' }}>{esp}</span>
+                            <span style={{ fontSize: 11, color: barColor, fontWeight: 600 }}>{pct}%</span>
+                          </div>
+                          <div style={{ height: 3, background: 'rgba(255,255,255,0.06)', borderRadius: 2 }}>
+                            <div style={{ width: `${pct}%`, height: '100%', background: barColor, borderRadius: 2, transition: 'width 0.8s ease' }} />
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Descripción */}
+                <div style={{ fontSize: 11, color: '#64748b', lineHeight: 1.5 }}>
+                  {zonaActiva.descripcion}
+                </div>
               </div>
-            </>
+            </div>
           )}
 
           {/* ── PANEL PESCA ── */}
