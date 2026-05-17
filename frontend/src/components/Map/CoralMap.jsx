@@ -81,6 +81,9 @@ function reefApiAZonaPesca(reef) {
     viento:v.velocidad_kmh!=null?`${v.direccion_cardinal??''} ${v.velocidad_kmh} km/h`:'—',
     sotaventoDe:v.direccion_cardinal??'?',
     prediccion:reef.predictions?.pesca??'Sin predicción disponible.',
+    blanqueamiento:reef.predictions?.blanqueamiento??'Sin prediccion disponible para los proximos dias.',
+    salud:reef.predictions?.salud??'Sin resumen de salud disponible.',
+    tendencia:reef.tendencia??null,
     alerta:reef.predictions?.alerta??'',fecha:reef.fecha??''}
 }
 
@@ -128,6 +131,76 @@ function MetricBox({label,value,color}){
     </div>
   )
 }
+function extraerHorario(texto) {
+  const match = String(texto ?? '').match(/(\d{1,2}:\d{2}\s*(?:AM|PM)?(?:\s*[–-]\s*\d{1,2}:\d{2}\s*(?:AM|PM)?)?)/i)
+  return match?.[1] ?? 'Temprano, antes del viento fuerte'
+}
+function nivelHumano(dhw) {
+  if (dhw >= 8) return 'Muy alto'
+  if (dhw >= 4) return 'Alto'
+  if (dhw >= 1) return 'Medio'
+  return 'Bajo'
+}
+function saludCoral(dhw) {
+  return Math.max(6, Math.min(98, Math.round(96 - (dhw ?? 0) * 10)))
+}
+function textoSalud(score) {
+  if (score >= 80) return 'Salud estable'
+  if (score >= 55) return 'Vigilar de cerca'
+  if (score >= 30) return 'Estres alto'
+  return 'Riesgo critico'
+}
+function consejoPescaArrecife(zona) {
+  if (zona.estado === 'critico') return 'Evitar pesca cerca del coral. Buscar zonas arenosas o aguas mas profundas.'
+  if (zona.estado === 'riesgo') return 'Pescar con cupo bajo y sin anclar sobre coral. Mejor salir temprano.'
+  if (zona.estado === 'moderado') return 'Pesca responsable permitida. Mantener distancia del coral somero.'
+  return 'Zona favorable para pesca responsable. Cuidar tallas minimas y evitar dañar el fondo.'
+}
+function consejoCuidadoArrecife(zona) {
+  if (zona.estado === 'critico') return 'Prioridad alta: reportar blanqueamiento, reducir turismo intenso y evitar contacto.'
+  if (zona.estado === 'riesgo') return 'Vigilar cambios de color y temperatura. Evitar anclas y actividad intensa.'
+  if (zona.estado === 'moderado') return 'Monitorear esta semana y mantener buenas practicas de navegación.'
+  return 'Arrecife estable. Mantener monitoreo y pesca responsable para conservarlo.'
+}
+function weeklySeries(zona) {
+  const dhw = zona?.tendencia?.dhw_serie?.map(Number).filter(n=>Number.isFinite(n))
+  if (dhw?.length) return dhw.slice(-7)
+  const now = Number(zona?.dhw ?? 0)
+  return [0.82,0.88,0.94,1,1.06,1.12,1.18].map(x=>Math.max(0,Number((now*x).toFixed(2))))
+}
+function WeeklyChart({zona}) {
+  const data = weeklySeries(zona)
+  const max = Math.max(1,...data)
+  const points = data.map((v,i)=>`${18+i*(244/(data.length-1))},${112-(v/max)*76}`).join(' ')
+  const area = `18,116 ${points} 262,116`
+  return (
+    <div style={{background:'rgba(248,250,252,0.84)',border:'1px solid rgba(15,23,42,0.12)',boxShadow:'0 14px 36px rgba(2,6,23,0.16)',padding:14}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:8}}>
+        <div>
+          <div style={{fontSize:14,fontWeight:800,color:'#0f172a'}}>Prediccion semanal</div>
+          <div style={{fontSize:11,color:'#64748b'}}>Acumulacion de calor DHW, 7 dias</div>
+        </div>
+        <div style={{fontFamily:MONO,fontSize:10,color:'#10b981',background:'rgba(52,211,153,0.12)',padding:'4px 7px'}}>DHW</div>
+      </div>
+      <svg viewBox="0 0 280 128" style={{width:'100%',height:128,display:'block'}}>
+        {[34,58,82,106].map(y=><line key={y} x1="18" x2="262" y1={y} y2={y} stroke="rgba(15,23,42,0.08)" strokeWidth="1"/>)}
+        <polygon points={area} fill="rgba(52,211,153,0.18)"/>
+        <polyline points={points} fill="none" stroke="#10b981" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+        {data.map((v,i)=><circle key={i} cx={18+i*(244/(data.length-1))} cy={112-(v/max)*76} r="3.5" fill="#10b981"/>)}
+        {['Hoy','D2','D3','D4','D5','D6','D7'].map((d,i)=><text key={d} x={18+i*(244/6)} y="126" textAnchor="middle" fontSize="9" fill="#64748b">{d}</text>)}
+      </svg>
+    </div>
+  )
+}
+function DecisionCard({label, value, detail, color}) {
+  return (
+    <div style={{background:'rgba(248,250,252,0.88)',border:'1px solid rgba(15,23,42,0.12)',borderTop:`3px solid ${color}`,boxShadow:'0 14px 36px rgba(2,6,23,0.14)',padding:'14px 15px'}}>
+      <div style={{fontSize:11,color:'#64748b',fontWeight:700,marginBottom:8}}>{label}</div>
+      <div style={{fontSize:24,fontWeight:900,color:'#0f172a',lineHeight:1.05,marginBottom:8}}>{value}</div>
+      <div style={{fontSize:12,color:'#475569',lineHeight:1.45,fontWeight:600}}>{detail}</div>
+    </div>
+  )
+}
 
 export default function CoralMap() {
   const [zonaActiva,  setZonaActiva]  = useState(null)
@@ -136,6 +209,7 @@ export default function CoralMap() {
   const [zonasPesca,  setZonasPesca]  = useState(ZONAS_PESCA_FALLBACK)
   const [apiOnline,   setApiOnline]   = useState(false)
   const [tab,         setTab]         = useState('arrecife') // 'arrecife' | 'pesca'
+  const [slide,       setSlide]       = useState(0)
   const [panelWidth,  setPanelWidth]  = useState(380)
   const isDragging  = useRef(false)
   const startX      = useRef(0)
@@ -181,46 +255,137 @@ export default function CoralMap() {
 
   const panelAbierto = zonaActiva||pescaActiva
   const cfgActiva    = zonaActiva ? CFG[zonaActiva.estado] : null
+  const zonasOrdenadas = [...zonasPesca].sort((a,b)=>(a.dhw??0)-(b.dhw??0))
+  const mejorZona = zonasOrdenadas.find(z=>z.estado?.permitida) ?? zonasOrdenadas[0]
+  const zonaRiesgo = [...zonasPesca].sort((a,b)=>(b.dhw??0)-(a.dhw??0))[0]
+  const zonaGuia = pescaActiva ?? mejorZona
+  const zonasEnAlerta = zonasPesca.filter(z=>(z.dhw??0)>=1).length
+  const colorGuia = zonaGuia?.estado?.color ?? '#34d399'
+  const decisionPesca = zonaGuia?.estado?.permitida ? 'Si se puede salir' : 'Mejor descansar la zona'
+  const detallePesca = zonaGuia?.estado?.permitida
+    ? `${zonaGuia.nombre}: salir ${extraerHorario(zonaGuia.prediccion)} y pescar del lado protegido.`
+    : `${zonaGuia?.nombre ?? 'Zona seleccionada'} necesita recuperacion hoy.`
+  const resumenProximosDias = zonaRiesgo?.blanqueamiento ?? zonaRiesgo?.alerta ?? 'Sin prediccion disponible.'
+  const saludHoy = saludCoral(zonaGuia?.dhw)
+  const zonasSeguras = zonasPesca.filter(z=>z.estado?.permitida).sort((a,b)=>(a.dhw??0)-(b.dhw??0)).slice(0,3)
+  const slides = [
+    { key:'salud', title:'Salud del coral', eyebrow:'Hoy', color:colorGuia },
+    { key:'semana', title:'Prediccion semanal', eyebrow:'Proximos 7 dias', color:colorGuia },
+    { key:'pesca', title:'Zonas seguras', eyebrow:'Pesca responsable', color:colorGuia },
+  ]
+  const activeSlide = slides[slide % slides.length]
 
   return (
     <div style={{display:'flex',height:'100vh',background:BG0,overflow:'hidden',fontFamily:'system-ui,sans-serif'}}>
 
       {/* ══ SIDEBAR IZQUIERDO ══ */}
-      <div style={{width:220,flexShrink:0,background:BG1,borderRight:B,display:'flex',flexDirection:'column'}}>
+      <div style={{width:320,flexShrink:0,background:'rgba(241,245,249,0.9)',borderRight:'1px solid rgba(255,255,255,0.55)',display:'flex',flexDirection:'column',boxShadow:'18px 0 48px rgba(2,6,23,0.28)',backdropFilter:'blur(18px)'}}>
 
         {/* Logo */}
-        <div style={{padding:'16px 16px 12px',borderBottom:B}}>
-          <div style={{fontFamily:MONO,fontSize:8,color:'#1e3a5f',letterSpacing:'0.25em',marginBottom:4}}>SYS // MONITOR</div>
-          <div style={{fontSize:14,fontWeight:700,color:'#f1f5f9',letterSpacing:'-0.01em'}}>CoralWatch</div>
-          <div style={{fontFamily:MONO,fontSize:8,color:'#134e4a',letterSpacing:'0.2em',marginTop:3}}>CARIBE · NOAA · LIVE</div>
+        <div style={{padding:'16px 16px 12px',borderBottom:'1px solid rgba(15,23,42,0.12)',background:'rgba(248,250,252,0.72)'}}>
+          <div style={{fontFamily:MONO,fontSize:8,color:'#10b981',letterSpacing:'0.25em',marginBottom:4,fontWeight:900}}>SYS // MONITOR</div>
+          <div style={{fontSize:18,fontWeight:950,color:'#0f172a',letterSpacing:'-0.01em'}}>CoralWatch</div>
+          <div style={{fontFamily:MONO,fontSize:8,color:'#0f766e',letterSpacing:'0.2em',marginTop:3,fontWeight:800}}>CARIBE · NOAA · LIVE</div>
         </div>
 
         {/* Tabs */}
-        <div style={{display:'flex',borderBottom:B}}>
+        <div style={{display:'flex',borderBottom:'1px solid rgba(15,23,42,0.12)',background:'rgba(226,232,240,0.65)',padding:6,gap:6}}>
           {[['arrecife','🪸 Arrecife'],['pesca','🎣 Pesca']].map(([t,label])=>(
             <button key={t} onClick={()=>setTab(t)} style={{
-              flex:1,padding:'8px 4px',fontFamily:MONO,fontSize:8,letterSpacing:'0.15em',textTransform:'uppercase',cursor:'pointer',
-              background:tab===t?'rgba(52,211,153,0.05)':'transparent',
-              borderBottom:tab===t?'2px solid #34d399':'2px solid transparent',
-              color:tab===t?'#34d399':'#334155',border:'none',borderBottom:tab===t?'2px solid #34d399':'2px solid transparent',
+              flex:1,padding:'9px 4px',fontFamily:MONO,fontSize:8,letterSpacing:'0.15em',textTransform:'uppercase',cursor:'pointer',
+              background:tab===t?'rgba(255,255,255,0.88)':'rgba(255,255,255,0.42)',
+              color:tab===t?'#059669':'#64748b',border:tab===t?'1px solid rgba(16,185,129,0.25)':'1px solid rgba(15,23,42,0.08)',fontWeight:900,
             }}>{label}</button>
           ))}
         </div>
 
+        {/* Carrusel sencillo para pescadores */}
+        {false&&zonaGuia&&(
+          <div style={{
+            margin:12,background:'rgba(241,245,249,0.92)',border:'1px solid rgba(255,255,255,0.55)',
+            boxShadow:'0 18px 42px rgba(2,6,23,0.28)',padding:12,backdropFilter:'blur(18px)'
+          }}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:10,marginBottom:10}}>
+              <div>
+                <div style={{fontSize:10,color:activeSlide.color,fontWeight:900,letterSpacing:'0.1em',textTransform:'uppercase'}}>{activeSlide.eyebrow}</div>
+                <div style={{fontSize:20,fontWeight:950,color:'#0f172a',letterSpacing:0,lineHeight:1.05}}>{activeSlide.title}</div>
+              </div>
+              <div style={{display:'flex',alignItems:'center',gap:5}}>
+                <button onClick={()=>setSlide((slide+slides.length-1)%slides.length)} style={{width:28,height:28,border:'1px solid rgba(15,23,42,0.12)',background:'rgba(255,255,255,0.72)',fontWeight:900,cursor:'pointer',color:'#0f172a'}}>‹</button>
+                <button onClick={()=>setSlide((slide+1)%slides.length)} style={{width:28,height:28,border:'1px solid rgba(15,23,42,0.12)',background:'rgba(255,255,255,0.72)',fontWeight:900,cursor:'pointer',color:'#0f172a'}}>›</button>
+              </div>
+            </div>
+
+            {activeSlide.key==='salud'&&(
+              <div style={{display:'grid',gap:8}}>
+                <DecisionCard label="Salud del coral hoy" value={`${saludHoy}%`} detail={`${textoSalud(saludHoy)} en ${zonaGuia.nombre}. DHW ${zonaGuia.dhw}.`} color={colorGuia}/>
+                <DecisionCard label="Pesca de hoy" value={decisionPesca} detail={detallePesca} color={colorGuia}/>
+              </div>
+            )}
+
+            {activeSlide.key==='semana'&&(
+              <div style={{display:'grid',gap:8}}>
+                <WeeklyChart zona={zonaGuia}/>
+                <div style={{fontSize:12,color:'#334155',fontWeight:700,lineHeight:1.55,background:'rgba(255,255,255,0.62)',border:'1px solid rgba(15,23,42,0.1)',padding:'9px 10px'}}>
+                  {resumenProximosDias.slice(0,170)+(resumenProximosDias.length>170?'...':'')}
+                </div>
+              </div>
+            )}
+
+            {activeSlide.key==='pesca'&&(
+              <div style={{background:'rgba(248,250,252,0.84)',border:'1px solid rgba(15,23,42,0.12)',boxShadow:'0 12px 28px rgba(2,6,23,0.14)',padding:12}}>
+                <div style={{fontSize:14,fontWeight:800,color:'#0f172a',marginBottom:2}}>Zonas de pesca seguras</div>
+                <div style={{fontSize:11,color:'#64748b',marginBottom:8}}>Ordenadas por menor estres termico</div>
+                <div style={{display:'flex',flexDirection:'column',gap:7}}>
+                  {zonasSeguras.map(z=>(
+                    <button key={z.id} onClick={()=>abrirPesca(z)} style={{
+                      display:'grid',gridTemplateColumns:'1fr auto',gap:8,alignItems:'center',textAlign:'left',
+                      background:'rgba(255,255,255,0.72)',border:'1px solid rgba(15,23,42,0.1)',padding:'8px 9px',cursor:'pointer'
+                    }}>
+                      <span>
+                        <span style={{display:'block',fontSize:12,fontWeight:800,color:'#0f172a'}}>{z.nombre}</span>
+                        <span style={{display:'block',fontSize:10,color:'#64748b'}}>Salir {extraerHorario(z.prediccion)}</span>
+                      </span>
+                      <span style={{fontFamily:MONO,fontSize:9,fontWeight:800,color:z.estado?.color,background:`${z.estado?.color}18`,padding:'5px 6px'}}>
+                        DHW {z.dhw}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginTop:10}}>
+              <div style={{display:'flex',gap:6}}>
+                {slides.map((s,i)=>(
+                  <button key={s.key} onClick={()=>setSlide(i)} aria-label={s.title} style={{
+                    width:i===slide?22:7,height:7,borderRadius:999,border:'none',
+                    background:i===slide?activeSlide.color:'rgba(15,23,42,0.22)',cursor:'pointer'
+                  }}/>
+                ))}
+              </div>
+              <div style={{display:'flex',alignItems:'center',gap:6,fontSize:10,fontWeight:800,color:apiOnline?'#047857':'#92400e'}}>
+                <span style={{width:7,height:7,borderRadius:999,background:apiOnline?'#10b981':'#f59e0b'}}/>
+                {apiOnline?'Datos en vivo':'Datos guardados'}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Lista de zonas */}
-        <div style={{flex:1,overflowY:'auto'}}>
+        <div style={{flex:1,overflowY:'auto',padding:'10px 12px'}}>
           {tab==='arrecife' && ZONAS_REALES.map(z=>{
             const c=CFG[z.estado]
             const activo=zonaActiva?.id===z.id
             return(
               <button key={z.id} onClick={()=>abrirArrecife(z)} style={{
-                width:'100%',textAlign:'left',padding:'12px 16px',background:'transparent',
-                borderLeft:`2px solid ${activo?c.accent:'transparent'}`,
-                borderBottom:B,cursor:'pointer',
-                background:activo?'rgba(255,255,255,0.02)':'transparent',
+                width:'100%',textAlign:'left',padding:'11px 12px',marginBottom:8,
+                border:`1px solid ${activo?c.accent+'55':'rgba(15,23,42,0.1)'}`,borderTop:`3px solid ${c.accent}`,
+                cursor:'pointer',boxShadow:activo?'0 12px 28px rgba(2,6,23,0.16)':'0 8px 18px rgba(2,6,23,0.08)',
+                background:activo?'rgba(255,255,255,0.96)':'rgba(248,250,252,0.82)',
               }}>
-                <div style={{fontFamily:MONO,fontSize:8,color:c.accent,letterSpacing:'0.2em',marginBottom:3}}>{c.label}</div>
-                <div style={{fontSize:12,fontWeight:600,color:'#e2e8f0',lineHeight:1.3,marginBottom:3}}>{z.nombre}</div>
+                <div style={{fontFamily:MONO,fontSize:8,color:c.accent,letterSpacing:'0.2em',marginBottom:4,fontWeight:900}}>{c.label}</div>
+                <div style={{fontSize:13,fontWeight:900,color:'#0f172a',lineHeight:1.25,marginBottom:4}}>{z.nombre}</div>
                 <div style={{fontFamily:MONO,fontSize:9,color:'#334155'}}>{z.pais} · {z.cobertura}%</div>
               </button>
             )
@@ -230,23 +395,96 @@ export default function CoralMap() {
             const activo=pescaActiva?.id===z.id
             return(
               <button key={z.id} onClick={()=>abrirPesca(z)} style={{
-                width:'100%',textAlign:'left',padding:'12px 16px',background:'transparent',
-                borderLeft:`2px solid ${activo?z.estado?.color??'#06b6d4':'transparent'}`,
-                borderBottom:B,cursor:'pointer',
-                background:activo?'rgba(255,255,255,0.02)':'transparent',
+                width:'100%',textAlign:'left',padding:'11px 12px',marginBottom:8,
+                border:`1px solid ${activo?(z.estado?.color??'#10b981')+'55':'rgba(15,23,42,0.1)'}`,borderTop:`3px solid ${z.estado?.color??'#10b981'}`,
+                cursor:'pointer',boxShadow:activo?'0 12px 28px rgba(2,6,23,0.16)':'0 8px 18px rgba(2,6,23,0.08)',
+                background:activo?'rgba(255,255,255,0.96)':'rgba(248,250,252,0.82)',
               }}>
-                <div style={{fontFamily:MONO,fontSize:8,color:z.estado?.color??'#06b6d4',letterSpacing:'0.2em',marginBottom:3}}>{z.estado?.label}</div>
-                <div style={{fontSize:12,fontWeight:600,color:'#e2e8f0',marginBottom:3}}>🎣 {z.nombre}</div>
-                <div style={{fontFamily:MONO,fontSize:9,color:'#334155'}}>DHW {z.dhw} · {z.viento}</div>
+                <div style={{fontFamily:MONO,fontSize:8,color:z.estado?.color??'#10b981',letterSpacing:'0.2em',marginBottom:4,fontWeight:900}}>{z.estado?.label}</div>
+                <div style={{fontSize:13,fontWeight:900,color:'#0f172a',marginBottom:4}}>🎣 {z.nombre}</div>
+                <div style={{fontFamily:MONO,fontSize:9,color:'#64748b',fontWeight:700}}>DHW {z.dhw} · {z.viento}</div>
               </button>
             )
           })}
+
+          {/* Carrusel debajo de la lista */}
+          {zonaGuia&&(
+            <div style={{
+              margin:12,background:'rgba(241,245,249,0.92)',border:'1px solid rgba(255,255,255,0.55)',
+              boxShadow:'0 18px 42px rgba(2,6,23,0.28)',padding:12,backdropFilter:'blur(18px)'
+            }}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:10,marginBottom:10}}>
+                <div>
+                  <div style={{fontSize:10,color:activeSlide.color,fontWeight:900,letterSpacing:'0.1em',textTransform:'uppercase'}}>{activeSlide.eyebrow}</div>
+                  <div style={{fontSize:20,fontWeight:950,color:'#0f172a',letterSpacing:0,lineHeight:1.05}}>{activeSlide.title}</div>
+                </div>
+                <div style={{display:'flex',alignItems:'center',gap:5}}>
+                  <button onClick={()=>setSlide((slide+slides.length-1)%slides.length)} style={{width:28,height:28,border:'1px solid rgba(15,23,42,0.12)',background:'rgba(255,255,255,0.72)',fontWeight:900,cursor:'pointer',color:'#0f172a'}}>‹</button>
+                  <button onClick={()=>setSlide((slide+1)%slides.length)} style={{width:28,height:28,border:'1px solid rgba(15,23,42,0.12)',background:'rgba(255,255,255,0.72)',fontWeight:900,cursor:'pointer',color:'#0f172a'}}>›</button>
+                </div>
+              </div>
+
+              {activeSlide.key==='salud'&&(
+                <div style={{display:'grid',gap:8}}>
+                  <DecisionCard label="Salud del coral hoy" value={`${saludHoy}%`} detail={`${textoSalud(saludHoy)} en ${zonaGuia.nombre}. DHW ${zonaGuia.dhw}.`} color={colorGuia}/>
+                  <DecisionCard label="Pesca de hoy" value={decisionPesca} detail={detallePesca} color={colorGuia}/>
+                </div>
+              )}
+
+              {activeSlide.key==='semana'&&(
+                <div style={{display:'grid',gap:8}}>
+                  <WeeklyChart zona={zonaGuia}/>
+                  <div style={{fontSize:12,color:'#334155',fontWeight:700,lineHeight:1.55,background:'rgba(255,255,255,0.62)',border:'1px solid rgba(15,23,42,0.1)',padding:'9px 10px'}}>
+                    {resumenProximosDias.slice(0,170)+(resumenProximosDias.length>170?'...':'')}
+                  </div>
+                </div>
+              )}
+
+              {activeSlide.key==='pesca'&&(
+                <div style={{background:'rgba(248,250,252,0.84)',border:'1px solid rgba(15,23,42,0.12)',boxShadow:'0 12px 28px rgba(2,6,23,0.14)',padding:12}}>
+                  <div style={{fontSize:14,fontWeight:800,color:'#0f172a',marginBottom:2}}>Zonas de pesca seguras</div>
+                  <div style={{fontSize:11,color:'#64748b',marginBottom:8}}>Ordenadas por menor estres termico</div>
+                  <div style={{display:'flex',flexDirection:'column',gap:7}}>
+                    {zonasSeguras.map(z=>(
+                      <button key={z.id} onClick={()=>abrirPesca(z)} style={{
+                        display:'grid',gridTemplateColumns:'1fr auto',gap:8,alignItems:'center',textAlign:'left',
+                        background:'rgba(255,255,255,0.72)',border:'1px solid rgba(15,23,42,0.1)',padding:'8px 9px',cursor:'pointer'
+                      }}>
+                        <span>
+                          <span style={{display:'block',fontSize:12,fontWeight:800,color:'#0f172a'}}>{z.nombre}</span>
+                          <span style={{display:'block',fontSize:10,color:'#64748b'}}>Salir {extraerHorario(z.prediccion)}</span>
+                        </span>
+                        <span style={{fontFamily:MONO,fontSize:9,fontWeight:800,color:z.estado?.color,background:`${z.estado?.color}18`,padding:'5px 6px'}}>
+                          DHW {z.dhw}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginTop:10}}>
+                <div style={{display:'flex',gap:6}}>
+                  {slides.map((s,i)=>(
+                    <button key={s.key} onClick={()=>setSlide(i)} aria-label={s.title} style={{
+                      width:i===slide?22:7,height:7,borderRadius:999,border:'none',
+                      background:i===slide?activeSlide.color:'rgba(15,23,42,0.22)',cursor:'pointer'
+                    }}/>
+                  ))}
+                </div>
+                <div style={{display:'flex',alignItems:'center',gap:6,fontSize:10,fontWeight:800,color:apiOnline?'#047857':'#92400e'}}>
+                  <span style={{width:7,height:7,borderRadius:999,background:apiOnline?'#10b981':'#f59e0b'}}/>
+                  {apiOnline?'Datos en vivo':'Datos guardados'}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer API status */}
-        <div style={{padding:'10px 14px',borderTop:B,display:'flex',alignItems:'center',gap:6}}>
+        <div style={{padding:'10px 14px',borderTop:'1px solid rgba(15,23,42,0.12)',display:'flex',alignItems:'center',gap:6,background:'rgba(248,250,252,0.72)'}}>
           <span style={{width:5,height:5,background:apiOnline?'#34d399':'#fbbf24',display:'inline-block',animation:'blink 1.4s step-start infinite'}}/>
-          <span style={{fontFamily:MONO,fontSize:8,color:apiOnline?'#065f46':'#78350f',letterSpacing:'0.15em'}}>
+          <span style={{fontFamily:MONO,fontSize:8,color:apiOnline?'#047857':'#92400e',letterSpacing:'0.15em',fontWeight:900}}>
             {apiOnline?'API ONLINE':'CACHE LOCAL'}
           </span>
         </div>
@@ -292,23 +530,111 @@ export default function CoralMap() {
           ))}
         </MapContainer>
 
+        {/* Carrusel sencillo para pescadores */}
+        {false&&zonaGuia&&(
+          <div style={{
+            position:'absolute',top:16,left:16,zIndex:1000,width:'min(430px,calc(100% - 32px))',
+            background:'rgba(241,245,249,0.82)',border:'1px solid rgba(255,255,255,0.55)',
+            boxShadow:'0 24px 70px rgba(2,6,23,0.32)',padding:14,backdropFilter:'blur(18px)'
+          }}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12,marginBottom:12}}>
+              <div>
+                <div style={{fontSize:11,color:activeSlide.color,fontWeight:900,letterSpacing:'0.1em',textTransform:'uppercase'}}>{activeSlide.eyebrow}</div>
+                <div style={{fontSize:23,fontWeight:950,color:'#0f172a',letterSpacing:0,lineHeight:1.05}}>{activeSlide.title}</div>
+              </div>
+              <div style={{display:'flex',alignItems:'center',gap:6}}>
+                <button onClick={()=>setSlide((slide+slides.length-1)%slides.length)} style={{width:30,height:30,border:'1px solid rgba(15,23,42,0.12)',background:'rgba(255,255,255,0.72)',fontWeight:900,cursor:'pointer',color:'#0f172a'}}>‹</button>
+                <button onClick={()=>setSlide((slide+1)%slides.length)} style={{width:30,height:30,border:'1px solid rgba(15,23,42,0.12)',background:'rgba(255,255,255,0.72)',fontWeight:900,cursor:'pointer',color:'#0f172a'}}>›</button>
+              </div>
+            </div>
+
+            {activeSlide.key==='salud'&&(
+              <div style={{display:'grid',gap:10}}>
+                <DecisionCard
+                  label="Salud del coral hoy"
+                  value={`${saludHoy}%`}
+                  detail={`${textoSalud(saludHoy)} en ${zonaGuia.nombre}. DHW ${zonaGuia.dhw}.`}
+                  color={colorGuia}
+                />
+                <DecisionCard
+                  label="Pesca de hoy"
+                  value={decisionPesca}
+                  detail={detallePesca}
+                  color={colorGuia}
+                />
+              </div>
+            )}
+
+            {activeSlide.key==='semana'&&(
+              <div style={{display:'grid',gap:10}}>
+                <WeeklyChart zona={zonaGuia}/>
+                <div style={{fontSize:12,color:'#334155',fontWeight:700,lineHeight:1.55,background:'rgba(255,255,255,0.62)',border:'1px solid rgba(15,23,42,0.1)',padding:'10px 12px'}}>
+                  {resumenProximosDias.slice(0,190)+(resumenProximosDias.length>190?'...':'')}
+                </div>
+              </div>
+            )}
+
+            {activeSlide.key==='pesca'&&(
+              <div style={{background:'rgba(248,250,252,0.84)',border:'1px solid rgba(15,23,42,0.12)',boxShadow:'0 14px 36px rgba(2,6,23,0.16)',padding:14}}>
+                <div style={{fontSize:14,fontWeight:800,color:'#0f172a',marginBottom:2}}>Zonas de pesca seguras</div>
+                <div style={{fontSize:11,color:'#64748b',marginBottom:10}}>Ordenadas por menor estres termico</div>
+                <div style={{display:'flex',flexDirection:'column',gap:8}}>
+                  {zonasSeguras.map(z=>(
+                    <button key={z.id} onClick={()=>abrirPesca(z)} style={{
+                      display:'grid',gridTemplateColumns:'1fr auto',gap:10,alignItems:'center',textAlign:'left',
+                      background:'rgba(255,255,255,0.72)',border:'1px solid rgba(15,23,42,0.1)',padding:'9px 10px',cursor:'pointer'
+                    }}>
+                      <span>
+                        <span style={{display:'block',fontSize:13,fontWeight:800,color:'#0f172a'}}>{z.nombre}</span>
+                        <span style={{display:'block',fontSize:11,color:'#64748b'}}>Salir {extraerHorario(z.prediccion)}</span>
+                      </span>
+                      <span style={{fontFamily:MONO,fontSize:10,fontWeight:800,color:z.estado?.color,background:`${z.estado?.color}18`,padding:'5px 7px'}}>
+                        DHW {z.dhw}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginTop:12}}>
+              <div style={{display:'flex',gap:6}}>
+                {slides.map((s,i)=>(
+                  <button key={s.key} onClick={()=>setSlide(i)} aria-label={s.title} style={{
+                    width:i===slide?22:7,height:7,borderRadius:999,border:'none',
+                    background:i===slide?activeSlide.color:'rgba(15,23,42,0.22)',cursor:'pointer'
+                  }}/>
+                ))}
+              </div>
+              <div style={{display:'flex',alignItems:'center',gap:6,fontSize:10,fontWeight:800,color:apiOnline?'#047857':'#92400e'}}>
+                <span style={{width:7,height:7,borderRadius:999,background:apiOnline?'#10b981':'#f59e0b'}}/>
+                {apiOnline?'Datos en vivo':'Datos guardados'}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* HUD coords */}
         <div style={{position:'absolute',bottom:12,left:12,zIndex:1000,background:BG1,border:B,padding:'5px 10px',fontFamily:MONO,fontSize:9,color:'#334155'}}>
           15.50°N · 85.00°W · Z6
         </div>
 
         {/* Leyenda */}
-        <div style={{position:'absolute',bottom:12,right:12,zIndex:1000,background:BG1,border:B,borderLeft:'2px solid rgba(52,211,153,0.2)',padding:'10px 14px'}}>
-          <div style={{fontFamily:MONO,fontSize:8,color:'rgba(52,211,153,0.5)',letterSpacing:'0.25em',marginBottom:8}}>RIESGO DE BLANQUEAMIENTO</div>
+        <div style={{
+          position:'absolute',bottom:12,right:12,zIndex:1000,
+          background:'rgba(241,245,249,0.9)',border:'1px solid rgba(255,255,255,0.55)',
+          boxShadow:'0 18px 42px rgba(2,6,23,0.28)',padding:'12px 14px',backdropFilter:'blur(18px)'
+        }}>
+          <div style={{fontFamily:MONO,fontSize:8,color:'#059669',letterSpacing:'0.22em',marginBottom:9,fontWeight:900}}>RIESGO DE BLANQUEAMIENTO</div>
           {Object.entries(STATUS_LABELS).map(([k,label])=>(
-            <div key={k} style={{display:'flex',alignItems:'center',gap:8,fontFamily:MONO,fontSize:10,color:'#e2e8f0',marginBottom:5}}>
-              <span style={{width:8,height:8,background:STATUS_COLORS[k],display:'inline-block',flexShrink:0}}/>
+            <div key={k} style={{display:'flex',alignItems:'center',gap:8,fontFamily:MONO,fontSize:10,color:'#0f172a',marginBottom:6,fontWeight:800}}>
+              <span style={{width:9,height:9,background:STATUS_COLORS[k],display:'inline-block',flexShrink:0,boxShadow:`0 0 0 3px ${STATUS_COLORS[k]}18`}}/>
               {label}
             </div>
           ))}
-          <div style={{borderTop:B,marginTop:6,paddingTop:6}}>
-            <div style={{display:'flex',alignItems:'center',gap:8,fontFamily:MONO,fontSize:10,color:'#e2e8f0'}}>
-              <span style={{width:8,height:8,border:'1px dashed #06b6d4',display:'inline-block',flexShrink:0}}/>
+          <div style={{borderTop:'1px solid rgba(15,23,42,0.12)',marginTop:8,paddingTop:8}}>
+            <div style={{display:'flex',alignItems:'center',gap:8,fontFamily:MONO,fontSize:10,color:'#0f172a',fontWeight:800}}>
+              <span style={{width:9,height:9,border:'1px dashed #10b981',display:'inline-block',flexShrink:0,background:'rgba(52,211,153,0.12)'}}/>
               Zona de Pesca
             </div>
           </div>
@@ -369,7 +695,24 @@ export default function CoralMap() {
                   </div>
 
                   {/* Métricas */}
-                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr',gap:3,marginBottom:14}}>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:10}}>
+                    <div style={{background:'rgba(248,250,252,0.9)',border:`1px solid ${cfgActiva.accent}33`,borderTop:`3px solid ${cfgActiva.accent}`,padding:'10px 11px'}}>
+                      <div style={{fontSize:10,color:'#64748b',fontWeight:800,marginBottom:5}}>Para pesca</div>
+                      <div style={{fontSize:15,fontWeight:900,color:'#0f172a',lineHeight:1.15,marginBottom:6}}>
+                        {zonaActiva.estado==='critico'?'Mejor evitar':zonaActiva.estado==='riesgo'?'Con cuidado':'Apto con cuidado'}
+                      </div>
+                      <div style={{fontSize:11,color:'#475569',lineHeight:1.45,fontWeight:650}}>{consejoPescaArrecife(zonaActiva)}</div>
+                    </div>
+                    <div style={{background:'rgba(248,250,252,0.9)',border:'1px solid rgba(16,185,129,0.24)',borderTop:'3px solid #10b981',padding:'10px 11px'}}>
+                      <div style={{fontSize:10,color:'#64748b',fontWeight:800,marginBottom:5}}>Cuidado del arrecife</div>
+                      <div style={{fontSize:15,fontWeight:900,color:'#0f172a',lineHeight:1.15,marginBottom:6}}>
+                        {textoSalud(Math.round(zonaActiva.cobertura*2.2))}
+                      </div>
+                      <div style={{fontSize:11,color:'#475569',lineHeight:1.45,fontWeight:650}}>{consejoCuidadoArrecife(zonaActiva)}</div>
+                    </div>
+                  </div>
+
+                  <div style={{display:'none',gridTemplateColumns:'1fr 1fr 1fr 1fr',gap:3,marginBottom:14}}>
                     <MetricBox label="COBERTURA" value={`${zonaActiva.cobertura}%`} color={cfgActiva.accent}/>
                     <MetricBox label="ALERT LVL"  value="0/3"                        color="#6366f1"/>
                     <MetricBox label="ESP. CLAVE" value={zonaActiva.especies?.[0]?.split(' ').pop()??'—'} color="#38bdf8"/>
@@ -377,8 +720,8 @@ export default function CoralMap() {
                   </div>
 
                   {/* Especies */}
-                  <Label>ESPECIES DOMINANTES</Label>
-                  <div style={{display:'flex',flexDirection:'column',gap:6,marginBottom:12}}>
+                  {false&&<Label>ESPECIES DOMINANTES</Label>}
+                  <div style={{display:'none',flexDirection:'column',gap:6,marginBottom:12}}>
                     {(zonaActiva.especies??[]).slice(0,4).map((esp,i)=>(
                       <div key={esp}>
                         <div style={{display:'flex',justifyContent:'space-between',marginBottom:3}}>
@@ -392,8 +735,9 @@ export default function CoralMap() {
                     ))}
                   </div>
 
-                  <div style={{fontFamily:MONO,fontSize:9,color:'#334155',lineHeight:1.7,borderTop:B,paddingTop:8}}>
-                    {zonaActiva.descripcion}
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
+                    <MetricBox label="COBERTURA" value={`${zonaActiva.cobertura}%`} color={cfgActiva.accent}/>
+                    <MetricBox label="SALUD" value={`${Math.round(zonaActiva.cobertura*2.2)}%`} color="#10b981"/>
                   </div>
                 </div>
               </div>
@@ -416,6 +760,17 @@ export default function CoralMap() {
                 </div>
 
                 <div style={{padding:'14px 16px',display:'flex',flexDirection:'column',gap:10}}>
+                  <div style={{background:`${pescaActiva.estado?.color}10`,border:`1px solid ${pescaActiva.estado?.color}33`,padding:'12px 12px'}}>
+                    <div style={{fontFamily:MONO,fontSize:8,color:pescaActiva.estado?.color,letterSpacing:'0.16em',textTransform:'uppercase',marginBottom:6}}>
+                      Respuesta rapida
+                    </div>
+                    <div style={{fontSize:18,fontWeight:900,color:'#f8fafc',lineHeight:1.15,marginBottom:6}}>
+                      {pescaActiva.estado?.permitida?'Puedes salir, con cuidado':'No conviene pescar aqui hoy'}
+                    </div>
+                    <div style={{fontSize:12,color:'#cbd5e1',lineHeight:1.5}}>
+                      Mejor horario: <strong style={{color:'#f8fafc'}}>{extraerHorario(pescaActiva.prediccion)}</strong>. Zona sugerida: lado protegido del viento ({pescaActiva.sotaventoDe ?? 'O'}).
+                    </div>
+                  </div>
                   {/* Métricas */}
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:3}}>
                     {[
@@ -439,8 +794,8 @@ export default function CoralMap() {
                   {/* Predicción */}
                   {pescaActiva.estado?.permitida?(
                     <>
-                      <Label>PREDICCIÓN CLAUDE · NOAA</Label>
-                      <div style={{borderLeft:'2px solid rgba(6,182,212,0.3)',paddingLeft:12,fontFamily:MONO,fontSize:9,color:'#94a3b8',lineHeight:1.8}}>
+                      <Label>CUANDO Y DONDE PESCAR</Label>
+                      <div style={{borderLeft:'2px solid rgba(6,182,212,0.3)',paddingLeft:12,fontSize:12,color:'#cbd5e1',lineHeight:1.65}}>
                         {pescaActiva.prediccion}
                       </div>
                     </>
@@ -454,6 +809,11 @@ export default function CoralMap() {
                   {/* Educación */}
                   <div style={{borderLeft:'2px solid rgba(52,211,153,0.2)',paddingLeft:12,fontFamily:MONO,fontSize:9,color:'#6ee7b7',lineHeight:1.7}}>
                     🪸 DHW {pescaActiva.dhw} — {pescaActiva.dhw<1?'coral sano y produciendo larvas.':pescaActiva.dhw<4?'estrés leve. Pesca con cuidado.':pescaActiva.dhw<8?'coral sufre. Menos refugio = menos peces.':'coral blanquea. Pesquería afectada.'}
+                  </div>
+
+                  <Label>COMO SE VERA EN LOS PROXIMOS DIAS</Label>
+                  <div style={{borderLeft:'2px solid rgba(251,191,36,0.35)',paddingLeft:12,fontSize:12,color:'#fde68a',lineHeight:1.65}}>
+                    {pescaActiva.blanqueamiento}
                   </div>
 
                   {pescaActiva.alerta&&(

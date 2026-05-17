@@ -1,0 +1,147 @@
+
+> my-project@0.1.0 dev
+> next dev
+
+   ▲ Next.js 15.1.11
+   - Local:        http://localhost:3007
+   - Network:      http://192.168.1.27:3007
+   - Environments: .env
+
+ ✓ Starting...
+ ✓ Ready in 3.2s
+ ○ Compiling / ...
+ ✓ Compiled / in 7.9s (1425 modules)
+ GET / 200 in 973ms
+ ✓ Compiled in 1449ms (721 modules)
+ ✓ Compiled in 398ms (721 modules)
+ ○ Compiling /dashboard ...
+ ✓ Compiled /dashboard in 1938ms (1079 modules)
+ GET /dashboard 200 in 2432ms
+ GET /dashboard 200 in 47ms
+ ✓ Compiled / in 362ms (755 modules)
+ GET / 200 in 696ms
+ GET /dashboard 200 in 199ms
+ GET / 200 in 60ms
+ GET / 200 in 63ms
+ GET /dashboard 200 in 29ms
+ ✓ Compiled in 2.3s (918 modules)
+ GET / 200 in 90ms
+ GET / 200 in 61ms
+ ✓ Compiled in 8.1s (918 modules)
+ ✓ Compiled in 964ms (918 modules)
+ ✓ Compiled in 665ms (918 modules)
+ ✓ Compiled in 615ms (918 modules)
+ ✓ Compiled in 729ms (918 modules)
+ ✓ Compiled in 807ms (918 modules)
+ ✓ Compiled in 647ms (918 modules)
+ ✓ Compiled in 659ms (918 modules)
+ ✓ Compiled in 803ms (918 modules)
+ ✓ Compiled in 614ms (918 modules)
+ ✓ Compiled in 510ms (918 modules)
+ ✓ Compiled in 479ms (918 modules)
+ ✓ Compiled in 482ms (918 modules)
+ GET / 200 in 125ms
+ ✓ Compiled in 574ms (918 modules)
+ ✓ Compiled in 631ms (918 modules)
+ ✓ Compiled in 578ms (918 modules)
+ ✓ Compiled in 493ms (918 modules)
+ ✓ Compiled in 715ms (918 modules)
+ ✓ Compiled in 472ms (918 modules)
+ ✓ Compiled in 483ms (918 modules)
+ ✓ Compiled in 616ms (918 modules)
+ ✓ Compiled in 638ms (918 modules)
+ ✓ Compiled in 602ms (918 modules)
+ ✓ Compiled in 524ms (918 modules)
+ ✓ Compiled in 843ms (918 modules)
+ ✓ Compiled in 1029ms (918 modules)
+ ✓ Compiled in 674ms (918 modules)
+ ✓ Compiled in 644ms (918 modules)
+ ✓ Compiled in 726ms (918 modules)
+ ✓ Compiled in 522ms (918 modules)
+ ✓ Compiled in 692ms (918 modules)
+ ✓ Compiled in 629ms (918 modules)
+ GET / 200 in 148ms
+ GET / 200 in 69ms
+ ✓ Compiled in 957ms (918 modules)
+ ✓ Compiled in 642ms (918 modules)
+ GET / 200 in 66ms
+ GET / 200 in 678ms
+ GET / 200 in 150ms
+ GET / 200 in 359ms
+ GET / 200 in 75ms
+ GET / 200 in 113ms
+ GET / 200 in 234ms
+ GET / 200 in 80ms
+ / 500 in 30ms
+ ✓ Compiled in 970ms (918 modules)
+ ✓ Compiled in 599ms (918 modules)
+ ✓ Compiled in 791ms (918 modules)
+ ✓ Compiled in 499ms (918 modules)
+ ✓ Compiled in 475ms (918 modules)
+ ✓ Compiled in 544ms (918 modules)
+ GET / 500 in 29ms
+ ✓ Compiled in 4.8s (918 modules)
+ GET / 500 in 23ms
+ ✓ Compiled in 771ms (918 modules)
+ ✓ Compiled in 673ms (918 modules)
+ ✓ Compiled in 577ms (918 modules)
+ ✓ Compiled in 520ms (918 modules)
+ ✓ Compiled in 412ms (918 modules)
+ ✓ Compiled in 702ms (918 modules)
+ ✓ Compiled in 536ms (918 modules)
+ ✓ Compiled in 454ms (918 modules)
+ ✓ Compiled in 521ms (918 modules)
+ ✓ Compiled in 387ms (918 modules)
+ ✓ Compiled in 389ms (918 modules)
+ ✓ Compiled in 397ms (918 modules)
+ ✓ Compiled in 357ms (918 modules)
+ GET / 500 in 35ms
+ ✓ Compiled in 607ms (918 modules)
+ ✓ Compiled in 558ms (918 modules)
+ ✓ Compiled in 500ms (918 modules)
+ ✓ Compiled in 503ms (918 modules)
+ ✓ Compiled in 511ms (918 modules)
+ ✓ Compiled in 575ms (918 modules)
+ ✓ Compiled in 564ms (918 modules)
+ ✓ Compiled in 477ms (918 modules)
+ ✓ Compiled in 715ms (918 modules)
+ ✓ Compiled in 591ms (918 modules)
+ ✓ Compiled in 492ms (918 modules)
+ ✓ Compi GET / 200 in 423ms
+ GET /dashboard 200 in 44ms
+ GET / 200 in 88ms
+ GET /dashboard 200 in 46ms
+ GET / 200 in 119ms
+ GET /dashboard 200 in 32ms
+ GET / 200 in 176ms
+ GET / 200 in 93ms
+ GET /dashboard 200 in 109ms
+ GET /dashboard 200 in 65ms
+18 modules)
+ ✓ Compiled in 652ms (918 modules)
+ ✓ Compiled in 464ms (918 modules)
+ ✓ Compiled in 351ms (918 modules)
+ ✓ Compiled in 450ms (918 modules)
+ GET / 500 in 29ms
+ ✓ Compiled in 586ms (918 modules)
+ ✓ Compiled in 681ms (918 modules)
+ ✓ Compiled in 605ms (918 modules)
+ ✓ Compiled in 874ms (918 modules)
+ ✓ Compiled in 477ms (918 modules)
+ ✓ Compiled in 538ms (918 modules)
+ GET / 500 in 34ms
+ GET / 500 in 14ms
+mpiled in 353ms (755 modules)
+ ✓ Compiled in 410ms (755 modules)
+ GET / 200 in 55ms
+ GET /dashboard 200 in 24ms
+ ✓ Compiled in 576ms (755 modules)
+ ✓ Compiled in 660ms (755 modules)
+ ✓ Compiled in 537ms (755 modules)
+ ✓ Compiled in 752ms (755 modules)
+ ✓ Compiled in 474ms (755 modules)
+ ✓ Compiled in 499ms (755 modules)
+ GET / 200 in 79ms
+ GET /dashboard 200 in 25ms
+ GET / 200 in 30ms
+ GET /dashboard 200 in 18ms
