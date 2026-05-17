@@ -14,6 +14,13 @@ L.Icon.Default.mergeOptions({
   shadowUrl:     'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 })
 
+// ── Design tokens industriales ──────────────────────────────────────────────
+const MONO = "'JetBrains Mono', 'Fira Code', 'Courier New', monospace"
+const BG0  = '#020617'   // fondo base
+const BG1  = '#070a13'   // cards/panels
+const BG2  = '#0b1120'   // overlays
+const BORDER = 'rgba(30,41,59,0.9)'   // slate-800
+
 // To add a new reef: add one object here with id, nombre, pais, coords, cobertura,
 // ocean ('pacific'|'caribbean'), depth ('shallow'|'deep'), estado, descripcion, fuente.
 const ZONAS_REALES = [
@@ -72,8 +79,6 @@ const ZONAS_REALES = [
 ]
 
 // ─── Lógica de zona de pesca responsable ────────────────────────────────────
-
-// Paso 1: determina el semáforo según DHW
 function getEstadoZona(dhw) {
   if (dhw > 8) return { color: '#ef4444', label: 'VEDA',      permitida: false, maxLanchas: 0,  descripcion: 'Coral en blanqueamiento severo — zona cerrada para recuperación.' }
   if (dhw > 4) return { color: '#f97316', label: 'LIMITADA',  permitida: true,  maxLanchas: 3,  descripcion: 'Coral bajo estrés. Solo pesca de altura, sin buceo ni ancla en coral.' }
@@ -81,11 +86,7 @@ function getEstadoZona(dhw) {
   return         { color: '#34d399', label: 'PERMITIDA', permitida: true,  maxLanchas: 10, descripcion: 'Coral sano. Pesca responsable permitida — ancla solo en arena.' }
 }
 
-// Paso 2: calcula coordenadas del sotavento desde el arrecife y el viento
-// windDirGrados = de dónde viene el viento (86° = del Este)
-// distKm = qué tan lejos del arrecife colocar la zona segura
 function calcularSotavento(lat, lon, windDirGrados, distKm = 9) {
-  // Sotavento = dirección OPUESTA al viento
   const sotaventoDirRad = ((windDirGrados + 180) % 360) * (Math.PI / 180)
   const gradosPorKm = 1 / 111
   return [
@@ -94,24 +95,18 @@ function calcularSotavento(lat, lon, windDirGrados, distKm = 9) {
   ]
 }
 
-// Paso 3: radio de la zona según condición del viento
 function calcularRadio(velocidadKmh, dhw) {
   const base = velocidadKmh < 15 ? 10000 : velocidadKmh < 30 ? 7000 : 5000
-  // Si hay estrés térmico, reducir el radio (menos área explotable)
   return dhw > 4 ? base * 0.6 : base
 }
 
-// Paso 4: rotación para no repetir la misma zona dos días seguidos
-// Usa el día del año para rotar entre zonas disponibles
 function debeRotar(slug) {
-  const dia = Math.floor(Date.now() / 86400000) // días desde epoch
+  const dia = Math.floor(Date.now() / 86400000)
   const slugs = ['honduras', 'nicaragua', 'quintana_roo', 'belize']
   const turnoHoy = dia % slugs.length
-  // La zona descansa si le tocó ayer
   return slugs[(turnoHoy - 1 + slugs.length) % slugs.length] === slug
 }
 
-// Metadatos fijos por slug — solo nombre e id, coords se calculan del viento
 const PESCA_META = {
   honduras:     { id: 'pesca_roatan',    nombre: 'Cordelia Banks' },
   nicaragua:    { id: 'pesca_nicaragua', nombre: 'Miskito Cays'   },
@@ -119,7 +114,6 @@ const PESCA_META = {
   belize:       { id: 'pesca_belize',   nombre: 'Hol Chan'        },
 }
 
-// Fallback estático con DHW reales del último noaa.js
 const ZONAS_PESCA_FALLBACK = [
   { id: 'pesca_roatan',    nombre: 'Cordelia Banks', coords: [16.318, -86.620], radio: 6000, sst: '30.3°C', dhw: 0.83, viento: 'E 37 km/h', enDescanso: false,
     prediccion: 'Salida 5:00–6:00 AM. Lado oeste de Cordelia Banks, 15–25 m, usando el arrecife como barrera contra viento E. Retornar antes de 2:00 PM.',
@@ -135,7 +129,6 @@ const ZONAS_PESCA_FALLBACK = [
     alerta: 'Hol Chan en estrés térmico con DHW subiendo. Evita anclar en coral vivo.' },
 ]
 
-// Convierte un reef del API aplicando los 4 pasos
 function reefApiAZonaPesca(reef) {
   const meta = PESCA_META[reef.slug]
   if (!meta) return null
@@ -144,36 +137,28 @@ function reefApiAZonaPesca(reef) {
   const dhw = d.dhw ?? 0
   const lat = reef.coordenadas?.lat ?? 0
   const lon = reef.coordenadas?.lon ?? 0
-
-  // Paso 2: coords calculadas desde el viento real
   const coords = v.direccion_grados != null
     ? calcularSotavento(lat, lon, v.direccion_grados)
-    : [lat, lon - 0.08]  // fallback: mover al oeste
-
-  // Paso 3: radio según viento y DHW
+    : [lat, lon - 0.08]
   const radio = calcularRadio(v.velocidad_kmh ?? 20, dhw)
-
-  // Paso 4: rotación
   const enDescanso = debeRotar(reef.slug)
-
   const estado = enDescanso
     ? { color: '#6366f1', label: 'DESCANSO', permitida: false, maxLanchas: 0, descripcion: 'Esta zona descansa hoy para permitir recuperación del arrecife. Prueba otra zona.' }
     : getEstadoZona(dhw)
-
   return {
     id:         meta.id,
     nombre:     meta.nombre,
     coords,
     radio,
     enDescanso,
-    estado,                                           // semáforo completo
+    estado,
     sst:        d.sst_max != null ? `${d.sst_max}°C` : '—',
     dhw,
     cobertura:  reef.cobertura ?? null,
     viento:     v.velocidad_kmh != null
       ? `${v.direccion_cardinal ?? ''} ${v.velocidad_kmh} km/h — ${v.condicion ?? ''}`
       : '—',
-    sotaventoDe: v.direccion_cardinal ?? '?',        // de dónde viene el viento
+    sotaventoDe: v.direccion_cardinal ?? '?',
     prediccion:  reef.predictions?.pesca  ?? 'Sin predicción disponible.',
     alerta:      reef.predictions?.alerta ?? '',
     blanqueamiento: reef.predictions?.blanqueamiento ?? '',
@@ -189,12 +174,12 @@ function createFishIcon(activo = false) {
     iconAnchor:  [size / 2, size / 2],
     html: `
       <div style="
-        width:${size}px;height:${size}px;border-radius:50%;
-        background:${activo ? 'rgba(6,182,212,0.3)' : 'rgba(6,182,212,0.15)'};
-        border:2px solid ${activo ? 'rgba(6,182,212,1)' : 'rgba(6,182,212,0.6)'};
+        width:${size}px;height:${size}px;
+        background:${activo ? 'rgba(6,182,212,0.25)' : 'rgba(6,182,212,0.1)'};
+        border:1px solid ${activo ? 'rgba(6,182,212,0.9)' : 'rgba(6,182,212,0.5)'};
         display:flex;align-items:center;justify-content:center;
         font-size:${activo ? 20 : 16}px;
-        box-shadow:0 0 ${activo ? 20 : 12}px rgba(6,182,212,${activo ? 0.8 : 0.4});
+        box-shadow:0 0 ${activo ? 16 : 8}px rgba(6,182,212,${activo ? 0.5 : 0.2});
       ">🎣</div>
     `,
   })
@@ -223,8 +208,9 @@ function getDHWPorEstado(estado) {
 
 function createGlowIcon(estado, activo = false) {
   const color = STATUS_COLORS[estado] ?? '#34d399'
-  const size  = activo ? 36 : 28
-  const inner = activo ? 18 : 14
+  const size  = activo ? 34 : 26
+  const inner = activo ? 14 : 10
+  // Square industrial marker instead of circle
   return L.divIcon({
     className: '',
     iconSize:    [size, size],
@@ -232,8 +218,8 @@ function createGlowIcon(estado, activo = false) {
     popupAnchor: [0, -size / 2 - 4],
     html: `
       <div style="position:relative;width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;">
-        <div style="position:absolute;inset:0;border-radius:50%;border:2px solid ${color};opacity:0.5;animation:pulse 2s infinite;"></div>
-        <div style="width:${inner}px;height:${inner}px;border-radius:50%;background:${color};border:2px solid rgba(255,255,255,0.3);box-shadow:0 0 14px ${color},0 0 28px ${color}44;"></div>
+        <div style="position:absolute;inset:0;border:1px solid ${color};opacity:0.4;animation:pulse 2s infinite;"></div>
+        <div style="width:${inner}px;height:${inner}px;background:${color};box-shadow:0 0 10px ${color},0 0 20px ${color}44;"></div>
       </div>
     `,
   })
@@ -246,6 +232,37 @@ function MapReady() {
 }
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'https://hackaton-ambiental-production.up.railway.app'
+
+// ── Componentes internos de UI industrial ────────────────────────────────────
+
+function SectionLabel({ children }) {
+  return (
+    <div style={{
+      fontFamily: MONO, fontSize: 9, letterSpacing: '0.2em', color: '#334155',
+      textTransform: 'uppercase', marginBottom: 8,
+      display: 'flex', alignItems: 'center', gap: 8,
+    }}>
+      {children}
+      <div style={{ flex: 1, height: 1, background: BORDER }} />
+    </div>
+  )
+}
+
+function MetricBox({ label, value, color }) {
+  return (
+    <div style={{
+      background: BG1,
+      border: `1px solid ${BORDER}`,
+      padding: '8px 10px',
+      position: 'relative',
+      overflow: 'hidden',
+    }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: color + '66' }} />
+      <div style={{ fontFamily: MONO, fontSize: 9, color: '#334155', letterSpacing: '0.18em', marginBottom: 5 }}>{label}</div>
+      <div style={{ fontFamily: MONO, fontSize: 16, fontWeight: 700, color, lineHeight: 1 }}>{value}</div>
+    </div>
+  )
+}
 
 export default function CoralMap() {
   const [zonaActiva,   setZonaActiva]   = useState(null)
@@ -261,24 +278,24 @@ export default function CoralMap() {
 
   // Drag-to-resize handlers
   const onDragStart = useCallback((e) => {
-    isDragging.current = true
-    startX.current     = e.clientX
-    startWidth.current = panelWidth
-    document.body.style.cursor    = 'col-resize'
+    isDragging.current  = true
+    startX.current      = e.clientX
+    startWidth.current  = panelWidth
+    document.body.style.cursor     = 'col-resize'
     document.body.style.userSelect = 'none'
   }, [panelWidth])
 
   useEffect(() => {
     const onMove = (e) => {
       if (!isDragging.current) return
-      const dx        = startX.current - e.clientX          // arrastrar izq = agrandar
-      const newWidth  = Math.min(Math.max(startWidth.current + dx, 320), window.innerWidth * 0.85)
+      const dx       = startX.current - e.clientX
+      const newWidth = Math.min(Math.max(startWidth.current + dx, 320), window.innerWidth * 0.85)
       setPanelWidth(newWidth)
     }
     const onUp = () => {
       if (!isDragging.current) return
       isDragging.current             = false
-      document.body.style.cursor    = ''
+      document.body.style.cursor     = ''
       document.body.style.userSelect = ''
     }
     window.addEventListener('mousemove', onMove)
@@ -297,7 +314,7 @@ export default function CoralMap() {
   function abrirArrecife(z)  {
     setZonaActiva(z)
     setPescaActiva(null)
-    setPanelWidth(window.innerWidth * 0.55)   // abre al 55% de la pantalla
+    setPanelWidth(window.innerWidth * 0.55)
   }
 
   useEffect(() => {
@@ -323,9 +340,10 @@ export default function CoralMap() {
   }, [])
 
   const panelAbierto = zonaActiva || pescaActiva
+  const accentColor  = zonaActiva ? STATUS_COLORS[zonaActiva.estado] : '#06b6d4'
 
   return (
-    <div ref={containerRef} style={{ display: 'flex', flexDirection: 'row', height: '100vh', background: '#0a0f1e', overflow: 'hidden' }}>
+    <div ref={containerRef} style={{ display: 'flex', flexDirection: 'row', height: '100vh', background: BG0, overflow: 'hidden' }}>
 
       {/* ── MAPA ── */}
       <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
@@ -334,11 +352,10 @@ export default function CoralMap() {
           zoom={6}
           zoomControl={true}
           attributionControl={false}
-          style={{ width: '100%', height: '100%', background: '#0a0f1e' }}
+          style={{ width: '100%', height: '100%', background: BG0 }}
         >
           <MapReady />
 
-          {/* Tiles satélite Esri (igual que el mapa de la amiga) */}
           <TileLayer
             url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
             attribution="Tiles &copy; Esri"
@@ -350,30 +367,27 @@ export default function CoralMap() {
             maxZoom={18}
           />
 
-          {/* GeoJSON del arrecife mesoamericano */}
           {reefGeoJson && (
             <GeoJSON
               data={reefGeoJson}
-              style={{ color: '#dc2626', fillColor: '#dc2626', fillOpacity: 0.25, weight: 1.5 }}
+              style={{ color: '#dc2626', fillColor: '#dc2626', fillOpacity: 0.2, weight: 1.5 }}
             />
           )}
 
-          {/* ── Zonas de pesca ── */}
+          {/* Zonas de pesca */}
           {zonasPesca.map(zona => (
             <React.Fragment key={zona.id}>
-              {/* Círculo — color según semáforo DHW */}
               <Circle
                 center={zona.coords}
                 radius={zona.radio}
                 pathOptions={{
                   color:       zona.estado?.color ?? '#06b6d4',
                   fillColor:   zona.estado?.color ?? '#06b6d4',
-                  fillOpacity: zona.estado?.permitida ? 0.08 : 0.18,
-                  weight:      zona.estado?.permitida ? 1.5 : 2.5,
+                  fillOpacity: zona.estado?.permitida ? 0.06 : 0.15,
+                  weight:      zona.estado?.permitida ? 1 : 2,
                   dashArray:   zona.estado?.permitida ? '6 4' : '2 4',
                 }}
               />
-              {/* Marcador 🎣 — abre panel inferior */}
               <Marker
                 position={zona.coords}
                 icon={createFishIcon(pescaActiva?.id === zona.id)}
@@ -382,7 +396,7 @@ export default function CoralMap() {
             </React.Fragment>
           ))}
 
-          {/* Marcadores con brillo */}
+          {/* Marcadores arrecifes */}
           {ZONAS_REALES.map(zona => (
             <Marker
               key={zona.id}
@@ -391,48 +405,59 @@ export default function CoralMap() {
               eventHandlers={{ click: () => abrirArrecife(zona) }}
             >
               <Popup>
+                {/* ── POPUP industrial ── */}
                 <div style={{
-                  background: 'rgba(10,15,30,0.97)',
-                  color: '#e2e8f0',
-                  padding: '12px 16px',
-                  borderRadius: 10,
+                  background: BG1,
+                  color: '#cbd5e1',
+                  padding: '14px 16px',
                   border: `1px solid ${STATUS_COLORS[zona.estado]}33`,
-                  fontFamily: 'system-ui, sans-serif',
-                  minWidth: 200,
-                  boxShadow: `0 0 20px ${STATUS_COLORS[zona.estado]}22`,
+                  borderLeft: `3px solid ${STATUS_COLORS[zona.estado]}`,
+                  fontFamily: MONO,
+                  minWidth: 210,
+                  borderRadius: 0,
                 }}>
-                  <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6, color: '#f1f5f9' }}>
+                  <div style={{ fontFamily: MONO, fontSize: 9, color: '#334155', letterSpacing: '0.2em', marginBottom: 4 }}>
+                    {zona.pais.replace(/\s*[\uD800-\uDFFF]{2}/g, '').trim()}
+                  </div>
+                  <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, color: '#f1f5f9', letterSpacing: '-0.01em' }}>
                     {zona.nombre}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#94a3b8', marginBottom: 8 }}>
-                    <span style={{
-                      width: 8, height: 8, borderRadius: '50%',
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                    <div style={{
+                      width: 6, height: 6,
                       background: STATUS_COLORS[zona.estado],
-                      display: 'inline-block',
-                      boxShadow: `0 0 6px ${STATUS_COLORS[zona.estado]}`,
+                      flexShrink: 0,
                     }} />
-                    {STATUS_LABELS[zona.estado]}
+                    <span style={{ fontFamily: MONO, fontSize: 9, color: STATUS_COLORS[zona.estado], letterSpacing: '0.15em' }}>
+                      {STATUS_LABELS[zona.estado].toUpperCase()}
+                    </span>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px', fontSize: 11, color: '#94a3b8' }}>
-                    <span>Cobertura:</span>
-                    <span style={{ color: STATUS_COLORS[zona.estado], fontWeight: 600 }}>{zona.cobertura}%</span>
-                    <span>País:</span>
-                    <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{zona.pais}</span>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px 10px', fontFamily: MONO, fontSize: 10, color: '#475569', marginBottom: 10 }}>
+                    <span>COBERTURA</span>
+                    <span style={{ color: STATUS_COLORS[zona.estado], fontWeight: 700 }}>{zona.cobertura}%</span>
+                    <span>OCÉANO</span>
+                    <span style={{ color: '#94a3b8', fontWeight: 600 }}>{zona.ocean?.toUpperCase()}</span>
                   </div>
-                  <div style={{ marginTop: 8, paddingTop: 6, borderTop: '1px solid rgba(148,163,184,0.15)', fontSize: 10, color: '#64748b', fontStyle: 'italic' }}>
+                  <div style={{
+                    borderTop: `1px solid ${BORDER}`,
+                    paddingTop: 8, marginBottom: 10,
+                    fontFamily: MONO, fontSize: 9, color: '#334155', lineHeight: 1.6,
+                  }}>
                     {zona.descripcion}
                   </div>
                   <button
                     onClick={() => setZonaActiva(zona)}
                     style={{
-                      marginTop: 10, width: '100%', padding: '6px 0',
-                      background: `${STATUS_COLORS[zona.estado]}22`,
-                      border: `1px solid ${STATUS_COLORS[zona.estado]}55`,
-                      borderRadius: 6, cursor: 'pointer',
-                      color: STATUS_COLORS[zona.estado], fontWeight: 700, fontSize: 12,
+                      width: '100%', padding: '7px 0',
+                      background: `${STATUS_COLORS[zona.estado]}12`,
+                      border: `1px solid ${STATUS_COLORS[zona.estado]}44`,
+                      borderRadius: 0, cursor: 'pointer',
+                      color: STATUS_COLORS[zona.estado],
+                      fontFamily: MONO, fontWeight: 700, fontSize: 10,
+                      letterSpacing: '0.15em', textTransform: 'uppercase',
                     }}
                   >
-                    Ver arrecife 3D →
+                    VER ARRECIFE 3D →
                   </button>
                 </div>
               </Popup>
@@ -440,64 +465,68 @@ export default function CoralMap() {
           ))}
         </MapContainer>
 
-        {/* Indicador LIVE / LOCAL */}
+        {/* ── HUD superior izquierdo: LIVE indicator ── */}
         <div style={{
-          position: 'absolute', top: 16, left: 16, zIndex: 1000,
+          position: 'absolute', top: 12, left: 12, zIndex: 1000,
           display: 'flex', alignItems: 'center', gap: 8,
-          background: 'rgba(10,15,30,0.85)', backdropFilter: 'blur(8px)',
-          border: `1px solid ${apiOnline ? 'rgba(52,211,153,0.2)' : 'rgba(251,191,36,0.2)'}`,
-          borderRadius: 6, padding: '6px 12px',
-          fontSize: 11, fontFamily: 'monospace',
-          color: apiOnline ? 'rgba(52,211,153,0.85)' : 'rgba(251,191,36,0.85)',
+          background: BG1,
+          border: `1px solid ${apiOnline ? 'rgba(52,211,153,0.25)' : 'rgba(251,191,36,0.25)'}`,
+          borderLeft: `2px solid ${apiOnline ? '#34d399' : '#fbbf24'}`,
+          padding: '6px 12px',
+          fontFamily: MONO, fontSize: 10,
+          color: apiOnline ? '#34d399' : '#fbbf24',
+          letterSpacing: '0.1em',
         }}>
           <span style={{
-            width: 8, height: 8, borderRadius: '50%',
+            width: 6, height: 6,
             background: apiOnline ? '#34d399' : '#fbbf24',
             display: 'inline-block',
-            animation: 'pulse 2s infinite',
-            boxShadow: `0 0 6px ${apiOnline ? '#34d399' : '#fbbf24'}`,
+            animation: 'blink 1.4s step-start infinite',
           }} />
-          {apiOnline ? 'LIVE — Predicciones NOAA/Claude' : 'LOCAL — Datos del último reporte'}
+          {apiOnline ? 'LIVE // NOAA · CLAUDE·AI' : 'CACHE // ÚLTIMO REPORTE'}
         </div>
 
-        {/* Coordenadas */}
+        {/* ── HUD inferior izquierdo: coords ── */}
         <div style={{
-          position: 'absolute', bottom: 16, left: 16, zIndex: 1000,
-          background: 'rgba(10,15,30,0.85)', backdropFilter: 'blur(8px)',
-          border: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: 6, padding: '5px 10px',
-          fontSize: 11, fontFamily: 'monospace', color: '#64748b',
+          position: 'absolute', bottom: 12, left: 12, zIndex: 1000,
+          background: BG1, border: `1px solid ${BORDER}`,
+          padding: '5px 10px',
+          fontFamily: MONO, fontSize: 10, color: '#334155', letterSpacing: '0.08em',
         }}>
-          15.50°N, 85.00°W · Zoom 6
+          15.50°N · 85.00°W · Z6
         </div>
 
-        {/* Leyenda */}
+        {/* ── Leyenda inferior derecha ── */}
         <div style={{
-          position: 'absolute', bottom: 16, right: 16, zIndex: 1000,
-          background: 'rgba(10,15,30,0.9)', backdropFilter: 'blur(8px)',
-          border: '1px solid rgba(52,211,153,0.15)',
-          borderRadius: 8, padding: '10px 14px',
+          position: 'absolute', bottom: 12, right: panelAbierto ? 0 : 12, zIndex: 1000,
+          background: BG1, border: `1px solid ${BORDER}`,
+          borderLeft: '2px solid rgba(52,211,153,0.2)',
+          padding: '10px 14px',
+          transition: 'right 0.3s ease',
         }}>
-          <p style={{ margin: '0 0 8px', fontSize: 9, fontWeight: 700, letterSpacing: 2, color: 'rgba(52,211,153,0.7)', textTransform: 'uppercase' }}>
-            Riesgo de Blanqueamiento
+          <p style={{
+            margin: '0 0 8px', fontFamily: MONO, fontSize: 9,
+            fontWeight: 700, letterSpacing: '0.2em', color: 'rgba(52,211,153,0.5)',
+            textTransform: 'uppercase',
+          }}>
+            RIESGO DE BLANQUEAMIENTO
           </p>
           {Object.entries(STATUS_LABELS).map(([key, label]) => (
-            <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: '#94a3b8', marginBottom: 5 }}>
+            <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: MONO, fontSize: 10, color: '#475569', marginBottom: 5 }}>
               <span style={{
-                width: 10, height: 10, borderRadius: '50%',
+                width: 8, height: 8,
                 background: STATUS_COLORS[key],
-                boxShadow: `0 0 8px ${STATUS_COLORS[key]}88`,
                 display: 'inline-block', flexShrink: 0,
               }} />
               {label}
             </div>
           ))}
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: 6, paddingTop: 6 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: '#94a3b8' }}>
+          <div style={{ borderTop: `1px solid ${BORDER}`, marginTop: 6, paddingTop: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: MONO, fontSize: 10, color: '#475569' }}>
               <span style={{
-                width: 10, height: 10, borderRadius: '50%',
+                width: 8, height: 8,
                 background: 'transparent',
-                border: '2px dashed #06b6d4',
+                border: '1px dashed #06b6d4',
                 display: 'inline-block', flexShrink: 0,
               }} />
               Zona de Pesca
@@ -509,304 +538,337 @@ export default function CoralMap() {
       {/* ── PANEL LATERAL DERECHO ── */}
       {panelAbierto && (
         <>
-        {/* Handle de resize */}
-        <div
-          onMouseDown={onDragStart}
-          style={{
-            width: 6,
-            flexShrink: 0,
-            cursor: 'col-resize',
-            background: 'transparent',
-            borderLeft: `2px solid ${zonaActiva ? STATUS_COLORS[zonaActiva.estado] + '55' : 'rgba(6,182,212,0.35)'}`,
-            position: 'relative',
-            zIndex: 10,
-            transition: 'border-color 0.2s',
-          }}
-          title="Arrastra para redimensionar"
-        >
-          {/* Grip visual */}
-          <div style={{
-            position: 'absolute', top: '50%', left: '50%',
-            transform: 'translate(-50%,-50%)',
-            display: 'flex', flexDirection: 'column', gap: 3,
-          }}>
-            {[0,1,2,3,4].map(i => (
-              <div key={i} style={{
-                width: 2, height: 2, borderRadius: '50%',
-                background: zonaActiva ? STATUS_COLORS[zonaActiva.estado] + 'aa' : 'rgba(6,182,212,0.6)',
-              }} />
-            ))}
+          {/* Handle de resize */}
+          <div
+            onMouseDown={onDragStart}
+            style={{
+              width: 4,
+              flexShrink: 0,
+              cursor: 'col-resize',
+              background: 'transparent',
+              borderLeft: `1px solid ${accentColor}44`,
+              position: 'relative',
+              zIndex: 10,
+            }}
+            title="Arrastra para redimensionar"
+          >
+            <div style={{
+              position: 'absolute', top: '50%', left: '50%',
+              transform: 'translate(-50%,-50%)',
+              display: 'flex', flexDirection: 'column', gap: 4,
+            }}>
+              {[0,1,2,3,4].map(i => (
+                <div key={i} style={{
+                  width: 2, height: 2,
+                  background: accentColor + '88',
+                }} />
+              ))}
+            </div>
           </div>
-        </div>
 
-        <div style={{
-          width: panelWidth,
-          display: 'flex', flexDirection: 'column',
-          background: '#0a0f1e',
-          overflowY: 'auto',
-          flexShrink: 0,
-          animation: 'slideIn 0.3s ease',
-        }}>
+          <div style={{
+            width: panelWidth,
+            display: 'flex', flexDirection: 'column',
+            background: BG0,
+            overflowY: 'auto',
+            flexShrink: 0,
+            borderLeft: `1px solid ${BORDER}`,
+            animation: 'slideIn 0.25s ease',
+          }}>
 
-          {/* ── PANEL ARRECIFE 3D ── */}
-          {zonaActiva && (
-            <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
+            {/* ══ PANEL ARRECIFE 3D ══ */}
+            {zonaActiva && (
+              <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
 
-              {/* Visor 3D — ocupa TODO el panel */}
-              <div style={{ position: 'absolute', inset: 0 }}>
-                <ReefViewer
-                  zone={zonaActiva.id}
-                  dhw={getDHWPorEstado(zonaActiva.estado)}
-                  especies={zonaActiva.modelos ?? ESPECIES_POR_ZONA[zonaActiva.id] ?? especiesDesdeMetadata(zonaActiva)}
-                  cobertura={zonaActiva.cobertura}
-                  descripcion={zonaActiva.descripcion}
-                />
-              </div>
-
-              {/* Botón cerrar — top right flotante */}
-              <button
-                onClick={() => setZonaActiva(null)}
-                style={{
-                  position: 'absolute', top: 12, right: 12, zIndex: 20,
-                  background: 'rgba(10,15,30,0.7)', backdropFilter: 'blur(8px)',
-                  border: '1px solid rgba(255,255,255,0.12)',
-                  color: '#94a3b8', borderRadius: 6, padding: '4px 12px',
-                  cursor: 'pointer', fontSize: 12,
-                }}
-              >✕</button>
-
-              {/* Overlay datos — bottom, glass — incluye nombre y estado */}
-              <div style={{
-                position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
-                background: 'linear-gradient(to top, rgba(10,15,30,0.98) 0%, rgba(10,15,30,0.92) 60%, transparent 100%)',
-                backdropFilter: 'blur(14px)',
-                padding: '32px 16px 16px',
-              }}>
-                {/* Nombre + estado */}
-                <div style={{ marginBottom: 12 }}>
-                  <div style={{ fontSize: 11, color: '#475569', marginBottom: 2 }}>{zonaActiva.pais}</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                    <span style={{ fontSize: 22, fontWeight: 700, color: '#f1f5f9' }}>{zonaActiva.nombre}</span>
-                    <span style={{
-                      fontSize: 11, padding: '3px 10px', borderRadius: 20, fontWeight: 700,
-                      background: `${STATUS_COLORS[zonaActiva.estado]}22`,
-                      border: `1px solid ${STATUS_COLORS[zonaActiva.estado]}66`,
-                      color: STATUS_COLORS[zonaActiva.estado],
-                    }}>
-                      {STATUS_LABELS[zonaActiva.estado]}
-                    </span>
-                  </div>
-                  <div style={{
-                    fontSize: 11, color: STATUS_COLORS[zonaActiva.estado],
-                    background: `${STATUS_COLORS[zonaActiva.estado]}15`,
-                    border: `1px solid ${STATUS_COLORS[zonaActiva.estado]}33`,
-                    borderRadius: 20, padding: '2px 10px', display: 'inline-block',
-                  }}>
-                    {STATUS_LABELS[zonaActiva.estado]} · {zonaActiva.cobertura}% cobertura
-                  </div>
+                {/* Visor 3D — ocupa TODO el panel */}
+                <div style={{ position: 'absolute', inset: 0 }}>
+                  <ReefViewer
+                    zone={zonaActiva.id}
+                    dhw={getDHWPorEstado(zonaActiva.estado)}
+                    especies={zonaActiva.modelos ?? ESPECIES_POR_ZONA[zonaActiva.id] ?? especiesDesdeMetadata(zonaActiva)}
+                    cobertura={zonaActiva.cobertura}
+                    descripcion={zonaActiva.descripcion}
+                  />
                 </div>
 
-                {/* Grid métricas */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8, marginBottom: 12 }}>
-                  {[
-                    { label: 'COBERTURA',   value: `${zonaActiva.cobertura}%`,  color: STATUS_COLORS[zonaActiva.estado] },
-                    { label: 'ALERT LVL',   value: '0/3',                        color: '#6366f1' },
-                    { label: 'ESP. CLAVE',  value: zonaActiva.especies?.[0]?.split(' ')[1] ?? '—', color: '#38bdf8' },
-                    { label: 'SALUD',       value: `${Math.round(zonaActiva.cobertura * 2.2)}%`, color: '#34d399' },
-                  ].map(m => (
-                    <div key={m.label} style={{
-                      background: 'rgba(255,255,255,0.04)',
-                      border: '1px solid rgba(255,255,255,0.07)',
-                      borderRadius: 8, padding: '7px 10px',
-                    }}>
-                      <div style={{ fontSize: 9, color: '#475569', letterSpacing: 1, marginBottom: 4 }}>{m.label}</div>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: m.color }}>{m.value}</div>
+                {/* Botón cerrar */}
+                <button
+                  onClick={() => setZonaActiva(null)}
+                  style={{
+                    position: 'absolute', top: 10, right: 10, zIndex: 20,
+                    background: BG1, border: `1px solid ${BORDER}`,
+                    color: '#475569', padding: '4px 10px',
+                    cursor: 'pointer', fontFamily: MONO, fontSize: 11,
+                    letterSpacing: '0.1em',
+                    borderRadius: 0,
+                  }}
+                >✕ ESC</button>
+
+                {/* ── Overlay datos — bottom glass ── */}
+                <div style={{
+                  position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
+                  background: `linear-gradient(to top, ${BG0}fd 0%, ${BG0}e8 55%, transparent 100%)`,
+                  backdropFilter: 'blur(12px)',
+                  padding: '40px 14px 14px',
+                }}>
+                  {/* País + Nombre + estado */}
+                  <div style={{ marginBottom: 12 }}>
+                    <div style={{ fontFamily: MONO, fontSize: 9, color: '#334155', letterSpacing: '0.2em', marginBottom: 4 }}>
+                      {zonaActiva.pais.replace(/\s*[\uD800-\uDFFF]{2}/g, '').trim()}
                     </div>
-                  ))}
-                </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                      <span style={{ fontFamily: MONO, fontSize: 20, fontWeight: 700, color: '#f1f5f9', letterSpacing: '-0.02em' }}>
+                        {zonaActiva.nombre}
+                      </span>
+                      <span style={{
+                        fontFamily: MONO, fontSize: 9, padding: '3px 8px',
+                        background: `${STATUS_COLORS[zonaActiva.estado]}12`,
+                        border: `1px solid ${STATUS_COLORS[zonaActiva.estado]}44`,
+                        borderRadius: 0,
+                        color: STATUS_COLORS[zonaActiva.estado],
+                        letterSpacing: '0.15em', fontWeight: 700, textTransform: 'uppercase',
+                      }}>
+                        {STATUS_LABELS[zonaActiva.estado]}
+                      </span>
+                    </div>
+                    <div style={{
+                      fontFamily: MONO, fontSize: 9,
+                      color: STATUS_COLORS[zonaActiva.estado],
+                      background: `${STATUS_COLORS[zonaActiva.estado]}0e`,
+                      borderLeft: `2px solid ${STATUS_COLORS[zonaActiva.estado]}`,
+                      padding: '3px 8px', display: 'inline-block',
+                      letterSpacing: '0.12em',
+                    }}>
+                      {STATUS_LABELS[zonaActiva.estado].toUpperCase()} · {zonaActiva.cobertura}% COBERTURA
+                    </div>
+                  </div>
 
-                {/* Especies con barras */}
-                <div style={{ marginBottom: 10 }}>
-                  <div style={{ fontSize: 9, color: '#475569', letterSpacing: 1.5, marginBottom: 6 }}>ESPECIES DOMINANTES</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  {/* Grid métricas */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 4, marginBottom: 12 }}>
+                    {[
+                      { label: 'COBERTURA',  value: `${zonaActiva.cobertura}%`,                               color: STATUS_COLORS[zonaActiva.estado] },
+                      { label: 'ALERT LVL',  value: '0/3',                                                    color: '#6366f1' },
+                      { label: 'ESP. CLAVE', value: zonaActiva.especies?.[0]?.split(' ').pop() ?? '—',         color: '#38bdf8' },
+                      { label: 'SALUD',      value: `${Math.round(zonaActiva.cobertura * 2.2)}%`,              color: '#34d399' },
+                    ].map(m => (
+                      <MetricBox key={m.label} {...m} />
+                    ))}
+                  </div>
+
+                  {/* Especies */}
+                  <SectionLabel>ESPECIES DOMINANTES</SectionLabel>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
                     {(zonaActiva.especies ?? []).slice(0, 4).map((esp, idx) => {
-                      const pct = idx === 0 ? 100 : idx === 1 ? 100 : idx === 2 ? 61 : 80
-                      const barColor = ['#a855f7','#34d399','#06b6d4','#a855f7'][idx]
+                      const pct      = [100, 100, 61, 80][idx] ?? 70
+                      const barColor = ['#a855f7', '#34d399', '#06b6d4', '#a855f7'][idx]
                       return (
                         <div key={esp}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-                            <span style={{ fontSize: 11, color: '#94a3b8', fontStyle: 'italic' }}>{esp}</span>
-                            <span style={{ fontSize: 11, color: barColor, fontWeight: 600 }}>{pct}%</span>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3, alignItems: 'center' }}>
+                            <span style={{ fontFamily: MONO, fontSize: 10, color: '#64748b', fontStyle: 'italic' }}>{esp}</span>
+                            <span style={{ fontFamily: MONO, fontSize: 10, color: barColor, fontWeight: 700 }}>{pct}%</span>
                           </div>
-                          <div style={{ height: 3, background: 'rgba(255,255,255,0.06)', borderRadius: 2 }}>
-                            <div style={{ width: `${pct}%`, height: '100%', background: barColor, borderRadius: 2, transition: 'width 0.8s ease' }} />
+                          <div style={{ height: 2, background: 'rgba(255,255,255,0.05)' }}>
+                            <div style={{
+                              width: `${pct}%`, height: '100%',
+                              background: `linear-gradient(90deg, ${barColor}99, ${barColor})`,
+                              transition: 'width 0.8s cubic-bezier(0.16,1,0.3,1)',
+                            }} />
                           </div>
                         </div>
                       )
                     })}
                   </div>
-                </div>
 
-                {/* Descripción */}
-                <div style={{ fontSize: 11, color: '#64748b', lineHeight: 1.5 }}>
-                  {zonaActiva.descripcion}
+                  {/* Descripción */}
+                  <div style={{
+                    fontFamily: MONO, fontSize: 10, color: '#334155', lineHeight: 1.7,
+                    borderTop: `1px solid ${BORDER}`, paddingTop: 8,
+                  }}>
+                    {zonaActiva.descripcion}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* ── PANEL PESCA ── */}
-          {pescaActiva && (
-            <>
-              {/* Header */}
-              <div style={{
-                padding: '14px 16px',
-                background: `${pescaActiva.estado?.color ?? '#06b6d4'}0d`,
-                display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-                borderBottom: `1px solid ${pescaActiva.estado?.color ?? '#06b6d4'}22`,
-                flexShrink: 0,
-              }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <span style={{ fontWeight: 700, color: '#f1f5f9', fontSize: 15 }}>
-                    🎣 {pescaActiva.nombre}
-                  </span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{
-                      fontSize: 11, padding: '2px 10px', borderRadius: 20, fontWeight: 700,
-                      background: `${pescaActiva.estado?.color}22`,
-                      border: `1px solid ${pescaActiva.estado?.color}66`,
-                      color: pescaActiva.estado?.color,
-                    }}>
-                      {pescaActiva.estado?.label}
+            {/* ══ PANEL PESCA ══ */}
+            {pescaActiva && (
+              <>
+                {/* Header */}
+                <div style={{
+                  padding: '12px 14px',
+                  background: BG1,
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+                  borderBottom: `1px solid ${BORDER}`,
+                  flexShrink: 0,
+                }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontFamily: MONO, fontSize: 9, color: '#334155', letterSpacing: '0.2em' }}>ZONA DE PESCA</span>
+                    </div>
+                    <span style={{ fontFamily: MONO, fontWeight: 700, color: '#f1f5f9', fontSize: 15, letterSpacing: '-0.01em' }}>
+                      🎣 {pescaActiva.nombre}
                     </span>
-                    {pescaActiva.fecha && <span style={{ fontSize: 10, color: '#475569' }}>{pescaActiva.fecha}</span>}
-                  </div>
-                </div>
-                <button onClick={() => setPescaActiva(null)} style={{
-                  background: 'transparent', border: '1px solid rgba(255,255,255,0.1)',
-                  color: '#64748b', borderRadius: 4, padding: '4px 10px', cursor: 'pointer', fontSize: 12,
-                }}>✕</button>
-              </div>
-
-              {/* Contenido en columna */}
-              <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-
-                {/* Estado */}
-                <div style={{
-                  background: `${pescaActiva.estado?.color}0f`,
-                  border: `1px solid ${pescaActiva.estado?.color}33`,
-                  borderRadius: 8, padding: '10px 12px',
-                }}>
-                  <div style={{ fontSize: 10, color: '#475569', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 }}>Estado del arrecife</div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: pescaActiva.estado?.color, marginBottom: 4 }}>
-                    {pescaActiva.estado?.label}
-                    {pescaActiva.estado?.maxLanchas > 0 && (
-                      <span style={{ fontSize: 11, fontWeight: 400, color: '#94a3b8', marginLeft: 8 }}>
-                        máx {pescaActiva.estado.maxLanchas} lanchas
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{
+                        fontFamily: MONO, fontSize: 9, padding: '2px 8px',
+                        background: `${pescaActiva.estado?.color}12`,
+                        border: `1px solid ${pescaActiva.estado?.color}44`,
+                        color: pescaActiva.estado?.color,
+                        letterSpacing: '0.15em', fontWeight: 700, textTransform: 'uppercase',
+                      }}>
+                        {pescaActiva.estado?.label}
                       </span>
-                    )}
+                      {pescaActiva.fecha && (
+                        <span style={{ fontFamily: MONO, fontSize: 9, color: '#334155' }}>{pescaActiva.fecha}</span>
+                      )}
+                    </div>
                   </div>
-                  <div style={{ fontSize: 11, color: '#94a3b8', lineHeight: 1.5 }}>
-                    {pescaActiva.estado?.descripcion}
-                  </div>
+                  <button onClick={() => setPescaActiva(null)} style={{
+                    background: 'transparent', border: `1px solid ${BORDER}`,
+                    color: '#334155', padding: '4px 10px', cursor: 'pointer',
+                    fontFamily: MONO, fontSize: 10, letterSpacing: '0.1em',
+                    borderRadius: 0,
+                  }}>✕</button>
                 </div>
 
-                {/* Métricas en grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                  {[
-                    { icon: '🌡️', label: 'Temp. mar',   value: pescaActiva.sst,                                       color: '#f97316' },
-                    { icon: '🔥', label: 'DHW',          value: `${pescaActiva.dhw}`,                                  color: pescaActiva.estado?.color },
-                    { icon: '💨', label: 'Viento',       value: pescaActiva.viento,                                    color: '#94a3b8' },
-                    { icon: '🧭', label: 'Zona segura',  value: `Sotavento ${pescaActiva.sotaventoDe ?? 'E'}`,         color: '#67e8f9' },
-                  ].map(({ icon, label, value, color }) => (
-                    <div key={label} style={{
-                      background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)',
-                      borderRadius: 8, padding: '8px 10px',
-                    }}>
-                      <div style={{ fontSize: 10, color: '#475569', marginBottom: 3 }}>{icon} {label}</div>
-                      <div style={{ fontSize: 12, fontWeight: 600, color }}>{value}</div>
-                    </div>
-                  ))}
-                </div>
+                {/* Cuerpo pesca */}
+                <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
 
-                {/* Predicción */}
-                {pescaActiva.estado?.permitida ? (
-                  <>
-                    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: 'rgba(52,211,153,0.7)', textTransform: 'uppercase' }}>
-                      Predicción Claude · NOAA
+                  {/* Estado del arrecife */}
+                  <div style={{
+                    background: `${pescaActiva.estado?.color}08`,
+                    borderLeft: `2px solid ${pescaActiva.estado?.color}`,
+                    padding: '10px 12px',
+                  }}>
+                    <div style={{ fontFamily: MONO, fontSize: 9, color: '#334155', letterSpacing: '0.18em', marginBottom: 5, textTransform: 'uppercase' }}>Estado del arrecife</div>
+                    <div style={{ fontFamily: MONO, fontSize: 13, fontWeight: 700, color: pescaActiva.estado?.color, marginBottom: 4 }}>
+                      {pescaActiva.estado?.label}
+                      {pescaActiva.estado?.maxLanchas > 0 && (
+                        <span style={{ fontSize: 10, fontWeight: 400, color: '#475569', marginLeft: 10 }}>
+                          MÁX {pescaActiva.estado.maxLanchas} LANCHAS
+                        </span>
+                      )}
                     </div>
+                    <div style={{ fontFamily: MONO, fontSize: 10, color: '#475569', lineHeight: 1.7 }}>
+                      {pescaActiva.estado?.descripcion}
+                    </div>
+                  </div>
+
+                  {/* Métricas */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
+                    {[
+                      { icon: '🌡️', label: 'TEMP. MAR',  value: pescaActiva.sst,                          color: '#f97316' },
+                      { icon: '🔥', label: 'DHW',         value: `${pescaActiva.dhw}`,                     color: pescaActiva.estado?.color },
+                      { icon: '💨', label: 'VIENTO',      value: pescaActiva.viento,                       color: '#94a3b8' },
+                      { icon: '🧭', label: 'ZONA SEGURA', value: `Sotavento ${pescaActiva.sotaventoDe ?? 'E'}`, color: '#67e8f9' },
+                    ].map(({ icon, label, value, color }) => (
+                      <div key={label} style={{
+                        background: BG1, border: `1px solid ${BORDER}`,
+                        padding: '8px 10px',
+                      }}>
+                        <div style={{ fontFamily: MONO, fontSize: 9, color: '#334155', letterSpacing: '0.15em', marginBottom: 4 }}>
+                          {icon} {label}
+                        </div>
+                        <div style={{ fontFamily: MONO, fontSize: 11, fontWeight: 600, color }}>{value}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Predicción */}
+                  {pescaActiva.estado?.permitida ? (
+                    <>
+                      <SectionLabel>PREDICCIÓN CLAUDE · NOAA</SectionLabel>
+                      <div style={{
+                        background: 'rgba(6,182,212,0.04)',
+                        borderLeft: '2px solid rgba(6,182,212,0.3)',
+                        padding: '10px 12px',
+                        fontFamily: MONO, fontSize: 11, color: '#94a3b8', lineHeight: 1.8,
+                      }}>
+                        {pescaActiva.prediccion}
+                      </div>
+                    </>
+                  ) : (
                     <div style={{
-                      background: 'rgba(6,182,212,0.05)', border: '1px solid rgba(6,182,212,0.15)',
-                      borderRadius: 8, padding: '10px 14px',
-                      fontSize: 12, color: '#cbd5e1', lineHeight: 1.7,
+                      background: `${pescaActiva.estado?.color}06`,
+                      borderLeft: `2px solid ${pescaActiva.estado?.color}`,
+                      padding: '12px',
+                      fontFamily: MONO, fontSize: 11, color: '#e2e8f0', lineHeight: 1.7,
                     }}>
-                      {pescaActiva.prediccion}
+                      <strong style={{ color: pescaActiva.estado?.color, display: 'block', marginBottom: 6, letterSpacing: '0.1em', fontSize: 10 }}>
+                        ⛔ ZONA NO DISPONIBLE HOY
+                      </strong>
+                      <p style={{ margin: '0 0 6px', color: '#64748b' }}>{pescaActiva.estado?.descripcion}</p>
+                      <p style={{ margin: 0, fontSize: 10, color: '#334155' }}>Coral sano hoy = más pesca mañana.</p>
                     </div>
-                  </>
-                ) : (
-                  <div style={{
-                    background: `${pescaActiva.estado?.color}0a`,
-                    border: `1px solid ${pescaActiva.estado?.color}33`,
-                    borderRadius: 8, padding: '14px',
-                    fontSize: 12, color: '#e2e8f0', lineHeight: 1.7,
-                  }}>
-                    <strong style={{ color: pescaActiva.estado?.color, display: 'block', marginBottom: 6 }}>⛔ Zona no disponible hoy</strong>
-                    <p style={{ margin: '0 0 8px' }}>{pescaActiva.estado?.descripcion}</p>
-                    <p style={{ margin: 0, fontSize: 11, color: '#94a3b8' }}>Coral sano hoy = más pesca mañana.</p>
-                  </div>
-                )}
+                  )}
 
-                {/* Rotación */}
-                {pescaActiva.enDescanso && (
-                  <div style={{
-                    background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.3)',
-                    borderRadius: 8, padding: '10px 12px',
-                    fontSize: 11, color: '#a5b4fc', lineHeight: 1.5,
-                  }}>
-                    🔄 Zona en descanso hoy — el sistema rota áreas para no sobrecargar el mismo arrecife dos días seguidos.
-                  </div>
-                )}
+                  {/* Rotación */}
+                  {pescaActiva.enDescanso && (
+                    <div style={{
+                      background: 'rgba(99,102,241,0.06)',
+                      borderLeft: '2px solid rgba(99,102,241,0.4)',
+                      padding: '10px 12px',
+                      fontFamily: MONO, fontSize: 10, color: '#a5b4fc', lineHeight: 1.7,
+                    }}>
+                      🔄 Zona en descanso hoy — rotación automática para no sobrecargar el mismo arrecife dos días seguidos.
+                    </div>
+                  )}
 
-                {/* Educación */}
-                <div style={{
-                  background: 'rgba(52,211,153,0.04)', border: '1px solid rgba(52,211,153,0.12)',
-                  borderRadius: 8, padding: '10px 12px',
-                  fontSize: 11, color: '#6ee7b7', lineHeight: 1.6,
-                }}>
-                  🪸 <strong>¿Por qué importa el coral?</strong> El arrecife es la guardería de los peces. Con DHW {pescaActiva.dhw} — {
-                    pescaActiva.dhw < 1 ? 'el coral está sano y produciendo larvas.'
-                    : pescaActiva.dhw < 4 ? 'hay estrés leve. Pesca con cuidado.'
-                    : pescaActiva.dhw < 8 ? 'el coral sufre. Menos refugio = menos peces pronto.'
-                    : 'el coral blanquea. La pesquería local se verá afectada.'
-                  }
+                  {/* Educación */}
+                  <div style={{
+                    background: 'rgba(52,211,153,0.03)',
+                    borderLeft: '2px solid rgba(52,211,153,0.2)',
+                    padding: '10px 12px',
+                    fontFamily: MONO, fontSize: 10, color: '#6ee7b7', lineHeight: 1.7,
+                  }}>
+                    🪸 DHW {pescaActiva.dhw} — {
+                      pescaActiva.dhw < 1 ? 'coral sano y produciendo larvas.'
+                      : pescaActiva.dhw < 4 ? 'estrés leve. Pesca con cuidado.'
+                      : pescaActiva.dhw < 8 ? 'coral sufre. Menos refugio = menos peces pronto.'
+                      : 'coral blanquea. La pesquería se verá afectada.'
+                    }
+                  </div>
+
+                  {/* Alerta */}
+                  {pescaActiva.alerta && (
+                    <div style={{
+                      background: 'rgba(239,68,68,0.05)',
+                      borderLeft: '2px solid rgba(239,68,68,0.3)',
+                      padding: '10px 12px',
+                      fontFamily: MONO, fontSize: 10, color: '#fca5a5', lineHeight: 1.7,
+                    }}>
+                      ⚠️ {pescaActiva.alerta}
+                    </div>
+                  )}
                 </div>
-
-                {/* Alerta */}
-                {pescaActiva.alerta && (
-                  <div style={{
-                    background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)',
-                    borderRadius: 8, padding: '10px 12px',
-                    fontSize: 11, color: '#fca5a5', lineHeight: 1.5,
-                  }}>
-                    ⚠️ {pescaActiva.alerta}
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-        </div>
+              </>
+            )}
+          </div>
         </>
       )}
 
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap');
         @keyframes pulse {
           0%, 100% { opacity: 1; transform: scale(1); }
-          50%       { opacity: 0.5; transform: scale(1.3); }
+          50%       { opacity: 0.4; transform: scale(1.4); }
+        }
+        @keyframes blink {
+          0%, 100% { opacity: 1; }
+          50%       { opacity: 0.2; }
         }
         @keyframes slideIn {
-          from { transform: translateX(40px); opacity: 0; }
+          from { transform: translateX(30px); opacity: 0; }
           to   { transform: translateX(0);    opacity: 1; }
         }
+        .leaflet-popup-content-wrapper {
+          background: transparent !important;
+          box-shadow: none !important;
+          padding: 0 !important;
+          border-radius: 0 !important;
+        }
+        .leaflet-popup-content { margin: 0 !important; }
+        .leaflet-popup-tip-container { display: none !important; }
       `}</style>
     </div>
   )
