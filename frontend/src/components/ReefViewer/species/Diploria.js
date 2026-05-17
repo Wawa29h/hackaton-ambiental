@@ -1,8 +1,9 @@
 import * as THREE from 'three'
+import { getHealthColor } from '../utils/healthColors.js'
 
 export function crearDiploria(x, z, dhw = 0) {
   const group = new THREE.Group()
-  const color = getColorDHW(dhw)
+  const color = getHealthColor(dhw)
   const escala = 0.9 + Math.random() * 0.7
   const mat = new THREE.MeshLambertMaterial({ color })
 
@@ -52,9 +53,3 @@ export function crearDiploria(x, z, dhw = 0) {
   return group
 }
 
-function getColorDHW(dhw) {
-  if (dhw < 4)  return 0x2ecc71
-  if (dhw < 8)  return 0xf39c12
-  if (dhw < 12) return 0xe8e8e8
-  return 0x555555
-}

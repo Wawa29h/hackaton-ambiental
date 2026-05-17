@@ -1,7 +1,7 @@
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
 import { useState } from 'react'
 import ReefViewer from '../ReefViewer/ReefViewer'
-import { especiesDesdeMetadata } from '../ReefViewer/species/index'
+import { ESPECIES_POR_ZONA, especiesDesdeMetadata } from '../ReefViewer/species/index'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 
@@ -193,7 +193,13 @@ export default function CoralMap() {
             <ReefViewer
               zone={zonaActiva.id}
               dhw={getDHWPorEstado(zonaActiva.estado)}
-              especies={zonaActiva.modelos ?? especiesDesdeMetadata(zonaActiva)}
+              especies={
+                zonaActiva.modelos ??
+                ESPECIES_POR_ZONA[zonaActiva.id] ??
+                especiesDesdeMetadata(zonaActiva)
+              }
+              cobertura={zonaActiva.cobertura}
+              descripcion={zonaActiva.descripcion}
             />
           </div>
         </div>
