@@ -1,6 +1,7 @@
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
 import { useState } from 'react'
 import ReefViewer from '../ReefViewer/ReefViewer'
+import { especiesDesdeMetadata } from '../ReefViewer/species/index'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 
@@ -12,6 +13,9 @@ L.Icon.Default.mergeOptions({
   shadowUrl:     'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 })
 
+// To add a new reef: add one object here with id, nombre, pais, coords, cobertura,
+// ocean ('pacific'|'caribbean'), depth ('shallow'|'deep'), estado, descripcion, fuente.
+// modelos is optional — if omitted, especiesDesdeMetadata() auto-derives the species mix.
 const ZONAS_REALES = [
   {
     id: 'los_cobanos',
@@ -19,9 +23,9 @@ const ZONAS_REALES = [
     pais: 'El Salvador 🇸🇻',
     coords: [13.524, -89.807],
     cobertura: 4,
-    ocean: 'Pacífico',
+    ocean: 'pacific',
+    depth: 'shallow',
     especies: ['Porites lobata', 'Pocillopora damicornis', 'Pavona clavus'],
-    modelos: ['PoritesLobata', 'Pocillopora'],
     estado: 'critico',
     descripcion: 'Único arrecife de El Salvador. Solo 4% de coral vivo.',
     fuente: 'MARN El Salvador / ResearchGate 2024'
@@ -32,9 +36,9 @@ const ZONAS_REALES = [
     pais: 'Honduras 🇭🇳',
     coords: [16.320, -86.535],
     cobertura: 18,
-    ocean: 'Caribe',
+    ocean: 'caribbean',
+    depth: 'shallow',
     especies: ['Acropora cervicornis', 'Acropora palmata', 'Diploria labyrinthiformis', 'Montastraea cavernosa', 'Orbicella annularis'],
-    modelos: ['Acropora', 'Diploria'],
     estado: 'riesgo',
     descripcion: 'Perdió cobertura del 46% al 5% en 2024.',
     fuente: 'Roatan Marine Park / CORAL Alliance'
@@ -45,9 +49,9 @@ const ZONAS_REALES = [
     pais: 'México 🇲🇽',
     coords: [20.420, -86.922],
     cobertura: 22,
-    ocean: 'Caribe',
+    ocean: 'caribbean',
+    depth: 'deep',
     especies: ['Diploria labyrinthiformis', 'Orbicella annularis', 'Acropora palmata', 'Colpophyllia natans', 'Agaricia tenuifolia'],
-    modelos: ['Diploria', 'Acropora'],
     estado: 'moderado',
     descripcion: 'Arrecife del Caribe mexicano con alta biodiversidad.',
     fuente: 'CONANP México / CONABIO'
@@ -58,9 +62,9 @@ const ZONAS_REALES = [
     pais: 'Nicaragua 🇳🇮',
     coords: [14.380, -82.780],
     cobertura: 43,
-    ocean: 'Caribe',
+    ocean: 'caribbean',
+    depth: 'shallow',
     especies: ['Pseudodiploria strigosa', 'Montastraea cavernosa', 'Orbicella faveolata', 'Agaricia agaricites', 'Porites astreoides'],
-    modelos: ['Diploria', 'PoritesLobata'],
     estado: 'sano',
     descripcion: 'El arrecife más saludable de Centroamérica. 43% de cobertura.',
     fuente: 'ResearchGate / MARFUND 2023'
@@ -184,12 +188,12 @@ export default function CoralMap() {
             <span style={{ fontSize: 11, color: '#555' }}>Fuente: {zonaActiva.fuente}</span>
           </div>
 
-          {/* Visor 3D */}
+          {/* Visor 3D — especies auto-derived if modelos not set */}
           <div style={{ flex: 1 }}>
             <ReefViewer
               zone={zonaActiva.id}
               dhw={getDHWPorEstado(zonaActiva.estado)}
-              especies={zonaActiva.modelos}
+              especies={zonaActiva.modelos ?? especiesDesdeMetadata(zonaActiva)}
             />
           </div>
         </div>

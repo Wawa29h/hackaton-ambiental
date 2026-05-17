@@ -35,7 +35,8 @@ export function crearPoritesLobata(x, z, dhw = 0) {
   }
 
   group.add(mesh)
-  group.position.set(x, -escala * 0.4, z)
+  // seatOffset: distance from group origin to bottom of flattened sphere (~55% of radius)
+  group.position.set(x, escala * 0.55, z)
   group.userData = {
     especie: 'Porites lobata',
     zona: 'Los Cóbanos, El Salvador',

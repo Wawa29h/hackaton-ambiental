@@ -25,7 +25,7 @@ export function crearPocillopora(x, z, dhw = 0) {
     }
   }
 
-  group.position.set(x, -0.1, z)
+  group.position.set(x, 0, z)
   group.userData = {
     especie: 'Pocillopora damicornis',
     zona: 'Los Cóbanos, El Salvador',

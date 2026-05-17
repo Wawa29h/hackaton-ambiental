@@ -39,7 +39,8 @@ export function crearDiploria(x, z, dhw = 0) {
     group.add(crestaMesh)
   }
 
-  group.position.set(x, -escala * 0.3, z)
+  // seatOffset: bottom of sphere flattened to 75% Y ≈ escala * 0.75
+  group.position.set(x, escala * 0.75, z)
   group.userData = {
     especie: 'Diploria labyrinthiformis',
     zona: 'Cozumel, México',
