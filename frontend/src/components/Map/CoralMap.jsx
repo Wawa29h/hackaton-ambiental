@@ -37,40 +37,41 @@ const SLUG_A_ZONA = {
   belize:       null, // no está en ZONAS_BASE
 }
 
-// Convierte DHW real → estado semáforo
-function dhwAEstado(dhw) {
-  if (dhw > 8) return 'critico'
-  if (dhw > 4) return 'riesgo'
-  if (dhw > 1) return 'moderado'
-  return 'sano'
-}
-
-// Merge datos API sobre la base biológica
+// Merge datos API sobre la base biológica actualizando el estado de estrés térmico
 function mergeZonasConApi(apiReefs) {
   return ZONAS_BASE.map(zona => {
     const r = apiReefs.find(a => SLUG_A_ZONA[a.slug] === zona.id || a.slug === zona.id)
     if (!r) return zona
     const dhw = r.datos?.dhw ?? zona.dhw
+    
+    const stress = r.datos?.stress_level ?? 0;
+    let estado = 'sano';
+    if (stress >= 3 || dhw >= 8) estado = 'critico';
+    else if (stress === 2 || dhw >= 4) estado = 'riesgo';
+    else if (stress === 1 || dhw >= 1) estado = 'moderado';
+
     return {
       ...zona,
       dhw,
       sst:    r.datos?.sst_max ?? zona.sst,
       viento: r.viento         ?? null,
-      estado: dhwAEstado(dhw),
+      estado: estado,
+      baa_numeric: r.datos?.stress_level ?? 0,
       baa:    r.datos?.baa_label ?? null,
       alerta: r.predictions?.alerta         ?? null,
       predBlanqueamiento: r.predictions?.blanqueamiento ?? null,
       predPesca:          r.predictions?.pesca          ?? null,
       predSalud:          r.predictions?.salud          ?? null,
+      proyeccion_diaria:  r.proyeccion_diaria           ?? zona.proyeccion_diaria ?? null,
       fechaDatos:         r.fecha ?? null,
     }
   })
 }
 
 const CFG = {
-  sano:     { accent: '#34d399', label: 'SANO'      },
-  moderado: { accent: '#fbbf24', label: 'ESTRÉS'    },
-  riesgo:   { accent: '#f97316', label: 'EN RIESGO' },
+  sano:     { accent: '#34d399', label: 'SALUDABLE' },
+  moderado: { accent: '#fbbf24', label: 'REGULAR'   },
+  riesgo:   { accent: '#f97316', label: 'DETERIORADO' },
   critico:  { accent: '#ef4444', label: 'CRÍTICO'   },
 }
 
@@ -133,7 +134,7 @@ function createFishIcon(activo=false) {
       box-shadow:0 0 ${activo?16:8}px rgba(6,182,212,${activo?0.5:0.2})">🎣</div>`})
 }
 const STATUS_COLORS = {sano:'#34d399',moderado:'#fbbf24',riesgo:'#f97316',critico:'#ef4444'}
-const STATUS_LABELS = {sano:'Sano',moderado:'Estrés Térmico',riesgo:'En Riesgo',critico:'Blanqueamiento Severo'}
+const STATUS_LABELS = {sano:'Saludable',moderado:'Regular',riesgo:'Deteriorado',critico:'Crítico'}
 function getDHWPorEstado(e){return e==='sano'?2:e==='moderado'?5:e==='riesgo'?9:13}
 function createGlowIcon(estado,activo=false){
   const color=STATUS_COLORS[estado]??'#34d399',s=activo?34:26,inner=activo?14:10
@@ -179,6 +180,12 @@ export default function CoralMap() {
   const [panelWidth,       setPanelWidth]       = useState(380)
   const [prediccionViva,   setPrediccionViva]   = useState(null)
   const [loadingPrediccion,setLoadingPrediccion]= useState(false)
+  const [loadingProyeccion,setLoadingProyeccion]= useState(false)
+  const [diaPrediccion,   setDiaPrediccion]    = useState(0)
+  const [infoOculta,       setInfoOculta]       = useState(false)
+  const [twinPos,          setTwinPos]          = useState({ x: null, y: 20 })
+  const [twinWidth,        setTwinWidth]        = useState(760)
+  const [infoHeight,       setInfoHeight]       = useState(260)
 
   // Mapeo zona frontend → ID del endpoint /api/zona/{id}
   const ZONA_API_ID = {
@@ -211,24 +218,119 @@ export default function CoralMap() {
       setLoadingPrediccion(false)
     }
   }
+
+  async function fetchProyeccionSemanal(zonaId) {
+    const apiId = ZONA_API_ID[zonaId]
+    if (!apiId) return
+    setLoadingProyeccion(true)
+    try {
+      const res = await fetch(`${API_URL}/api/zona/${apiId}/prediccion-semanal`)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await res.json()
+      const proyeccion = data.proyeccion_diaria ?? []
+      const attach = z => z && z.id === zonaId
+        ? { ...z, proyeccion_diaria: proyeccion, prediccionSemanal: data }
+        : z
+      setZonaActiva(prev => attach(prev))
+      setZonasReales(prev => prev.map(attach))
+    } catch {
+      const fallback = zonaActiva?.dhw != null
+        ? [{ dia: 0, dhw: zonaActiva.dhw, baa: zonaActiva.baa_numeric ?? 0, fuente: 'dato actual' }]
+        : []
+      setZonaActiva(prev => prev && prev.id === zonaId ? { ...prev, proyeccion_diaria: fallback } : prev)
+    } finally {
+      setLoadingProyeccion(false)
+    }
+  }
   const isDragging  = useRef(false)
   const startX      = useRef(0)
   const startWidth  = useRef(0)
+  const twinDragging = useRef(false)
+  const twinStartX   = useRef(0)
+  const twinStartY   = useRef(0)
+  const twinStartPos = useRef({ x: 0, y: 20 })
+  const twinPanelRef = useRef(null)
+  const twinResizeMode = useRef(null)
+  const twinStartWidth = useRef(760)
+  const twinStartInfoHeight = useRef(260)
 
   const onDragStart = useCallback((e)=>{
     isDragging.current=true; startX.current=e.clientX; startWidth.current=panelWidth
     document.body.style.cursor='col-resize'; document.body.style.userSelect='none'
   },[panelWidth])
 
+  const onTwinDragStart = useCallback((e)=>{
+    if (e.target.closest('button')) return
+    const rect = twinPanelRef.current?.getBoundingClientRect()
+    const current = {
+      x: twinPos.x ?? rect?.left ?? Math.max(240, window.innerWidth - 780),
+      y: twinPos.y ?? rect?.top ?? 20,
+    }
+    twinDragging.current = true
+    twinStartX.current = e.clientX
+    twinStartY.current = e.clientY
+    twinStartPos.current = current
+    setTwinPos(current)
+    document.body.style.cursor='move'
+    document.body.style.userSelect='none'
+  },[twinPos])
+
+  const onTwinResizeStart = useCallback((e, mode)=>{
+    e.preventDefault()
+    e.stopPropagation()
+    const rect = twinPanelRef.current?.getBoundingClientRect()
+    const current = {
+      x: twinPos.x ?? rect?.left ?? Math.max(240, window.innerWidth - twinWidth - 20),
+      y: twinPos.y ?? rect?.top ?? 20,
+    }
+    twinResizeMode.current = mode
+    twinStartX.current = e.clientX
+    twinStartY.current = e.clientY
+    twinStartPos.current = current
+    twinStartWidth.current = rect?.width ?? twinWidth
+    twinStartInfoHeight.current = infoHeight
+    setTwinPos(current)
+    document.body.style.cursor = mode === 'width' ? 'ew-resize' : 'ns-resize'
+    document.body.style.userSelect = 'none'
+  }, [twinPos, twinWidth, infoHeight])
+
   useEffect(()=>{
     const onMove=(e)=>{
-      if(!isDragging.current)return
-      const dx=startX.current-e.clientX
-      setPanelWidth(Math.min(Math.max(startWidth.current+dx,280),window.innerWidth*0.85))
+      if(isDragging.current){
+        const dx=startX.current-e.clientX
+        setPanelWidth(Math.min(Math.max(startWidth.current+dx,280),window.innerWidth*0.85))
+      }
+      if(twinDragging.current){
+        const dx=e.clientX-twinStartX.current
+        const dy=e.clientY-twinStartY.current
+        const panelW=twinPanelRef.current?.offsetWidth ?? 760
+        const panelH=twinPanelRef.current?.offsetHeight ?? 700
+        setTwinPos({
+          x: Math.min(Math.max(twinStartPos.current.x + dx, 230), window.innerWidth - panelW - 12),
+          y: Math.min(Math.max(twinStartPos.current.y + dy, 8), window.innerHeight - panelH + 80),
+        })
+      }
+      if(twinResizeMode.current === 'width'){
+        const dx=e.clientX-twinStartX.current
+        const maxWidth=Math.min(window.innerWidth - 245, 1100)
+        const newWidth=Math.min(Math.max(twinStartWidth.current - dx, 520), maxWidth)
+        const newX=Math.min(Math.max(twinStartPos.current.x + dx, 230), window.innerWidth - newWidth - 12)
+        setTwinWidth(newWidth)
+        setTwinPos(pos => ({ ...pos, x: newX }))
+      }
+      if(twinResizeMode.current === 'info'){
+        const dy=e.clientY-twinStartY.current
+        const panelH=twinPanelRef.current?.offsetHeight ?? window.innerHeight - 40
+        setInfoHeight(Math.min(Math.max(twinStartInfoHeight.current - dy, 110), Math.max(140, panelH - 340)))
+      }
     }
     const onUp=()=>{
-      if(!isDragging.current)return
-      isDragging.current=false; document.body.style.cursor=''; document.body.style.userSelect=''
+      if(!isDragging.current && !twinDragging.current && !twinResizeMode.current)return
+      isDragging.current=false
+      twinDragging.current=false
+      twinResizeMode.current=null
+      document.body.style.cursor=''
+      document.body.style.userSelect=''
     }
     window.addEventListener('mousemove',onMove); window.addEventListener('mouseup',onUp)
     return()=>{window.removeEventListener('mousemove',onMove); window.removeEventListener('mouseup',onUp)}
@@ -255,11 +357,23 @@ export default function CoralMap() {
     return()=>{c=true}
   },[])
 
-  function abrirArrecife(z){setZonaActiva(z);setPescaActiva(null);setPanelWidth(window.innerWidth*0.45);fetchPrediccionViva(z.id)}
+  function abrirArrecife(z){
+    setDiaPrediccion(0)
+    setZonaActiva(z)
+    setPescaActiva(null)
+    setPanelWidth(window.innerWidth*0.45)
+    setInfoOculta(false)
+    fetchPrediccionViva(z.id)
+    fetchProyeccionSemanal(z.id)
+  }
   function abrirPesca(z)   {setPescaActiva(z);setZonaActiva(null);setPanelWidth(380);fetchPrediccionViva(z.id)}
 
-  const panelAbierto = zonaActiva||pescaActiva
+  const panelAbierto = pescaActiva
   const cfgActiva    = zonaActiva ? CFG[zonaActiva.estado] : null
+  const proyeccionActiva = zonaActiva?.proyeccion_diaria ?? []
+  const puntoPrediccion = proyeccionActiva[diaPrediccion] ?? proyeccionActiva[0] ?? null
+  const dhwVisual = puntoPrediccion?.dhw ?? zonaActiva?.dhw ?? 0
+  const baaVisual = puntoPrediccion?.baa ?? zonaActiva?.baa_numeric ?? 0
 
   return (
     <div style={{display:'flex',height:'100vh',background:BG0,overflow:'hidden',fontFamily:'system-ui,sans-serif'}}>
@@ -280,8 +394,9 @@ export default function CoralMap() {
             <button key={t} onClick={()=>setTab(t)} style={{
               flex:1,padding:'8px 4px',fontFamily:MONO,fontSize:8,letterSpacing:'0.15em',textTransform:'uppercase',cursor:'pointer',
               background:tab===t?'rgba(52,211,153,0.05)':'transparent',
+              color:tab===t?'#34d399':'#334155',
+              border:'none',
               borderBottom:tab===t?'2px solid #34d399':'2px solid transparent',
-              color:tab===t?'#34d399':'#334155',border:'none',borderBottom:tab===t?'2px solid #34d399':'2px solid transparent',
             }}>{label}</button>
           ))}
         </div>
@@ -293,7 +408,7 @@ export default function CoralMap() {
             const activo=zonaActiva?.id===z.id
             return(
               <button key={z.id} onClick={()=>abrirArrecife(z)} style={{
-                width:'100%',textAlign:'left',padding:'12px 16px',background:'transparent',
+                width:'100%',textAlign:'left',padding:'12px 16px',
                 borderLeft:`2px solid ${activo?c.accent:'transparent'}`,
                 borderBottom:B,cursor:'pointer',
                 background:activo?'rgba(255,255,255,0.02)':'transparent',
@@ -309,7 +424,7 @@ export default function CoralMap() {
             const activo=pescaActiva?.id===z.id
             return(
               <button key={z.id} onClick={()=>abrirPesca(z)} style={{
-                width:'100%',textAlign:'left',padding:'12px 16px',background:'transparent',
+                width:'100%',textAlign:'left',padding:'12px 16px',
                 borderLeft:`2px solid ${activo?z.estado?.color??'#06b6d4':'transparent'}`,
                 borderBottom:B,cursor:'pointer',
                 background:activo?'rgba(255,255,255,0.02)':'transparent',
@@ -338,7 +453,38 @@ export default function CoralMap() {
           <MapReady/>
           <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" maxZoom={18}/>
           <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}" maxZoom={18}/>
-          {reefGeoJson&&<GeoJSON data={reefGeoJson} style={{color:'#dc2626',fillColor:'#dc2626',fillOpacity:0.2,weight:1.5}}/>}
+          {reefGeoJson&&<GeoJSON 
+            key={JSON.stringify(zonasReales.map(z=>z.estado))}
+            data={reefGeoJson} 
+            style={(feature) => {
+              if (!feature || !feature.geometry || !feature.geometry.coordinates) {
+                return { color: '#34d399', fillColor: '#34d399', fillOpacity: 0.25, weight: 1.5 };
+              }
+              let coords = feature.geometry.coordinates;
+              if (!Array.isArray(coords) || coords.length === 0) {
+                return { color: '#34d399', fillColor: '#34d399', fillOpacity: 0.25, weight: 1.5 };
+              }
+              while (Array.isArray(coords[0])) {
+                if (coords.length === 0) break;
+                coords = coords[0];
+              }
+              if (coords.length < 2 || typeof coords[0] !== 'number') {
+                return { color: '#34d399', fillColor: '#34d399', fillOpacity: 0.25, weight: 1.5 };
+              }
+              const [lng, lat] = coords;
+              
+              let closest = null;
+              let minDist = Infinity;
+              for (const z of zonasReales) {
+                if (!z.coords) continue;
+                const dist = Math.pow(z.coords[0] - lat, 2) + Math.pow(z.coords[1] - lng, 2);
+                if (dist < minDist) { minDist = dist; closest = z; }
+              }
+              
+              const color = closest && STATUS_COLORS[closest.estado] ? STATUS_COLORS[closest.estado] : '#34d399';
+              return { color: color, fillColor: color, fillOpacity: 0.4, weight: 1.5 };
+            }}
+          />}
 
           {zonasPesca.map(z=>(
             <React.Fragment key={z.id}>
@@ -378,7 +524,7 @@ export default function CoralMap() {
 
         {/* Leyenda */}
         <div style={{position:'absolute',bottom:12,right:12,zIndex:1000,background:BG1,border:B,borderLeft:'2px solid rgba(52,211,153,0.2)',padding:'10px 14px'}}>
-          <div style={{fontFamily:MONO,fontSize:8,color:'rgba(52,211,153,0.5)',letterSpacing:'0.25em',marginBottom:8}}>RIESGO DE BLANQUEAMIENTO</div>
+          <div style={{fontFamily:MONO,fontSize:8,color:'rgba(52,211,153,0.5)',letterSpacing:'0.25em',marginBottom:8}}>ESTADO DEL ARRECIFE</div>
           {Object.entries(STATUS_LABELS).map(([k,label])=>(
             <div key={k} style={{display:'flex',alignItems:'center',gap:8,fontFamily:MONO,fontSize:10,color:'#e2e8f0',marginBottom:5}}>
               <span style={{width:8,height:8,background:STATUS_COLORS[k],display:'inline-block',flexShrink:0}}/>
@@ -392,6 +538,272 @@ export default function CoralMap() {
             </div>
           </div>
         </div>
+
+        {/* Panel flotante del gemelo digital: 3D arriba + datos completos abajo */}
+        {zonaActiva && (
+          <div ref={twinPanelRef} style={{
+            position: 'absolute',
+            top: twinPos.y,
+            left: twinPos.x ?? undefined,
+            right: twinPos.x == null ? 20 : 'auto',
+            width: Math.min(twinWidth, window.innerWidth - 245),
+            height: 'calc(100vh - 40px)',
+            zIndex: 2000,
+            overflow: 'hidden',
+            boxShadow: '0 24px 60px rgba(0,0,0,0.55), 0 8px 20px rgba(0,0,0,0.35)',
+            background: 'rgba(2,6,23,0.62)',
+            backdropFilter: 'blur(18px)',
+            border: `1px solid ${cfgActiva?.accent ?? '#67e8f9'}44`,
+            display: 'flex',
+            flexDirection: 'column',
+          }}>
+            <div
+              onMouseDown={(e)=>onTwinResizeStart(e, 'width')}
+              title="Arrastra para cambiar el ancho"
+              style={{
+                position:'absolute',
+                left:0,
+                top:0,
+                bottom:0,
+                width:10,
+                zIndex:35,
+                cursor:'ew-resize',
+                background:'linear-gradient(to right, rgba(103,232,249,0.28), transparent)',
+              }}
+            />
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              zIndex: 20,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '10px 12px',
+              background: 'linear-gradient(to bottom, rgba(2,6,23,0.78), rgba(2,6,23,0))',
+              cursor: 'move',
+              userSelect: 'none',
+              pointerEvents: 'auto',
+            }} onMouseDown={onTwinDragStart}>
+              <div style={{ pointerEvents: 'none' }}>
+                <div style={{ fontFamily: MONO, fontSize: 8, color: cfgActiva?.accent ?? '#67e8f9', letterSpacing: '0.2em', marginBottom: 3 }}>
+                  GEMELO DIGITAL · ARRASTRA PARA MOVER
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: '#f8fafc', letterSpacing: '-0.02em' }}>
+                  {zonaActiva.nombre}
+                </div>
+              </div>
+              <div style={{display:'flex',gap:6,pointerEvents:'auto'}}>
+                <button onClick={() => setInfoOculta(v => !v)} style={{
+                  background: infoOculta ? `${cfgActiva?.accent ?? '#67e8f9'}22` : 'rgba(2,6,23,0.72)',
+                  border: `1px solid ${cfgActiva?.accent ?? '#67e8f9'}44`,
+                  color: cfgActiva?.accent ?? '#67e8f9',
+                  padding: '5px 10px',
+                  cursor: 'pointer',
+                  fontFamily: MONO,
+                  fontSize: 9,
+                  letterSpacing: '0.12em',
+                }}>{infoOculta ? 'MOSTRAR INFO' : 'OCULTAR INFO'}</button>
+                <button onClick={() => {
+                  setTwinPos({ x: null, y: 20 })
+                  setInfoOculta(false)
+                  setTwinWidth(760)
+                  setInfoHeight(260)
+                }} style={{
+                  background: 'rgba(2,6,23,0.72)',
+                  border: '1px solid rgba(148,163,184,0.22)',
+                  color: '#cbd5e1',
+                  padding: '5px 10px',
+                  cursor: 'pointer',
+                  fontFamily: MONO,
+                  fontSize: 9,
+                  letterSpacing: '0.12em',
+                }}>RESET</button>
+                <button onClick={() => setZonaActiva(null)} style={{
+                  background: 'rgba(2,6,23,0.72)',
+                  border: '1px solid rgba(148,163,184,0.22)',
+                  color: '#cbd5e1',
+                  padding: '5px 10px',
+                  cursor: 'pointer',
+                  fontFamily: MONO,
+                  fontSize: 9,
+                  letterSpacing: '0.12em',
+                }}>CERRAR</button>
+              </div>
+            </div>
+            <div style={{
+              position: 'relative',
+              width: '100%',
+              height: infoOculta ? '100%' : `calc(100% - ${infoHeight + 12}px)`,
+              minHeight: 0,
+              flex: '0 0 auto',
+              overflow: 'hidden',
+              isolation: 'isolate',
+              borderBottom: infoOculta ? 'none' : `1px solid ${cfgActiva?.accent ?? '#67e8f9'}33`,
+            }}>
+              <ReefViewer
+                zone={zonaActiva.id}
+                dhw={dhwVisual}
+                baa={baaVisual}
+                especies={zonaActiva.modelos ?? ESPECIES_POR_ZONA[zonaActiva.id] ?? especiesDesdeMetadata(zonaActiva)}
+                cobertura={zonaActiva.cobertura}
+                descripcion={zonaActiva.descripcion}
+                showHud={false}
+              />
+            </div>
+
+            {!infoOculta && (
+              <div
+                onMouseDown={(e)=>onTwinResizeStart(e, 'info')}
+                title="Arrastra para subir o bajar la informacion"
+                style={{
+                  flex:'0 0 12px',
+                  height:12,
+                  cursor:'ns-resize',
+                  borderTop:`1px solid ${cfgActiva?.accent ?? '#67e8f9'}55`,
+                  borderBottom:'1px solid rgba(15,23,42,0.9)',
+                  background:'linear-gradient(90deg, transparent, rgba(103,232,249,0.18), transparent)',
+                  display:'flex',
+                  alignItems:'center',
+                  justifyContent:'center',
+                }}
+              >
+                <div style={{width:54,height:2,background:`${cfgActiva?.accent ?? '#67e8f9'}88`}}/>
+              </div>
+            )}
+
+            <div style={{
+              flex: `0 0 ${infoHeight}px`,
+              height: infoHeight,
+              boxSizing: 'border-box',
+              display: infoOculta ? 'none' : 'block',
+              overflowY: 'auto',
+              background: `linear-gradient(180deg, rgba(2,6,23,0.72), ${BG0}f7)`,
+              borderTop: `1px solid ${cfgActiva?.accent ?? '#67e8f9'}33`,
+              padding: '14px 16px 16px',
+            }}>
+              <div style={{display:'flex',justifyContent:'space-between',gap:16,alignItems:'flex-start',marginBottom:12}}>
+                <div>
+                  <div style={{fontFamily:MONO,fontSize:8,color:cfgActiva?.accent ?? '#67e8f9',letterSpacing:'0.22em',marginBottom:4}}>
+                    {zonaActiva.pais.toUpperCase()} · NOAA / CLAUDE
+                  </div>
+                  <div style={{fontSize:20,fontWeight:800,color:'#f8fafc',letterSpacing:'-0.02em',lineHeight:1.1}}>
+                    {zonaActiva.nombre}
+                  </div>
+                </div>
+                <div style={{
+                  fontFamily:MONO,fontSize:9,padding:'5px 10px',
+                  background:`${cfgActiva?.accent ?? '#67e8f9'}14`,
+                  border:`1px solid ${cfgActiva?.accent ?? '#67e8f9'}44`,
+                  color:cfgActiva?.accent ?? '#67e8f9',
+                  letterSpacing:'0.16em',
+                  whiteSpace:'nowrap',
+                }}>
+                  {cfgActiva?.label} · {zonaActiva.cobertura}% COB.
+                </div>
+              </div>
+
+              <div style={{display:'grid',gridTemplateColumns:'repeat(4, minmax(0, 1fr))',gap:4,marginBottom:14}}>
+                <MetricBox label="COBERTURA" value={`${zonaActiva.cobertura}%`} color={cfgActiva?.accent ?? '#67e8f9'}/>
+                <MetricBox label={`DHW D+${diaPrediccion}`} value={dhwVisual!=null?Number(dhwVisual).toFixed(1):'—'} color={dhwVisual>4?'#ef4444':dhwVisual>1?'#f59e0b':'#34d399'}/>
+                <MetricBox label="SST" value={zonaActiva.sst!=null?`${zonaActiva.sst.toFixed(1)}°C`:'—'} color="#f97316"/>
+                <MetricBox label="BAA" value={`${baaVisual}/4`} color="#38bdf8"/>
+              </div>
+
+              <Label>SIMULACION TEMPORAL KORALIO</Label>
+              <div style={{borderLeft:`2px solid ${dhwVisual>4?'#ef4444':dhwVisual>1?'#f59e0b':'#34d399'}`,paddingLeft:10,marginBottom:14}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12,marginBottom:8}}>
+                  <span style={{fontFamily:MONO,fontSize:9,color:'#cbd5e1',letterSpacing:'0.12em'}}>
+                    DIA {diaPrediccion} · {puntoPrediccion?.fecha ?? 'HOY'}
+                  </span>
+                  <span style={{fontFamily:MONO,fontSize:8,color:'#64748b',letterSpacing:'0.12em'}}>
+                    {loadingProyeccion?'CARGANDO NOAA/COPERNICUS':'NOAA 30D + COPERNICUS'}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="7"
+                  step="1"
+                  value={diaPrediccion}
+                  disabled={loadingProyeccion || proyeccionActiva.length === 0}
+                  onChange={(e)=>setDiaPrediccion(Number(e.target.value))}
+                  style={{width:'100%',accentColor:dhwVisual>4?'#ef4444':dhwVisual>1?'#f59e0b':'#34d399',cursor:'pointer'}}
+                />
+                <div style={{display:'grid',gridTemplateColumns:'repeat(8,1fr)',gap:4,marginTop:6}}>
+                  {Array.from({length:8},(_,i)=>(
+                    <button key={i} onClick={()=>setDiaPrediccion(i)} disabled={proyeccionActiva.length===0} style={{
+                      border:'none',
+                      background:i===diaPrediccion?'rgba(52,211,153,0.18)':'rgba(15,23,42,0.7)',
+                      color:i===diaPrediccion?'#a7f3d0':'#64748b',
+                      fontFamily:MONO,
+                      fontSize:8,
+                      padding:'4px 0',
+                      cursor:'pointer',
+                    }}>D+{i}</button>
+                  ))}
+                </div>
+              </div>
+
+              {zonaActiva.viento&&(
+                <div style={{fontFamily:MONO,fontSize:9,color:'#94a3b8',letterSpacing:'0.08em',marginBottom:12,borderLeft:'2px solid rgba(56,189,248,0.35)',paddingLeft:10}}>
+                  Viento {zonaActiva.viento.direccion_cardinal} · {zonaActiva.viento.velocidad_kmh} km/h
+                  {zonaActiva.fechaDatos&&<span style={{marginLeft:12,color:'#64748b'}}>datos {zonaActiva.fechaDatos}</span>}
+                </div>
+              )}
+
+              <Label>ESPECIES REALES DEL ARRECIFE</Label>
+              <div style={{display:'grid',gridTemplateColumns:'repeat(2, minmax(0, 1fr))',gap:'6px 12px',marginBottom:12}}>
+                {(zonaActiva.especies??[]).slice(0,6).map((esp,i)=>(
+                  <div key={esp} style={{borderLeft:`2px solid ${SP_COLORS[i%SP_COLORS.length]}`,paddingLeft:8}}>
+                    <div style={{fontSize:11,color:'#e2e8f0',fontStyle:'italic',lineHeight:1.25}}>{esp}</div>
+                    <div style={{height:2,background:'rgba(255,255,255,0.07)',marginTop:4}}>
+                      <div style={{width:`${SP_PCT[i%SP_PCT.length]}%`,height:'100%',background:SP_COLORS[i%SP_COLORS.length]}}/>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{fontFamily:MONO,fontSize:10,color:'#cbd5e1',lineHeight:1.7,borderTop:B,paddingTop:10,marginBottom:12}}>
+                {zonaActiva.descripcion}
+              </div>
+
+              {zonaActiva.predBlanqueamiento&&(
+                <>
+                  <Label>BLANQUEAMIENTO · PREDICCIÓN</Label>
+                  <div style={{borderLeft:'2px solid rgba(239,68,68,0.45)',paddingLeft:10,fontFamily:MONO,fontSize:10,color:'#fecaca',lineHeight:1.75,marginBottom:12}}>
+                    {zonaActiva.predBlanqueamiento}
+                  </div>
+                </>
+              )}
+
+              {zonaActiva.predPesca&&(
+                <>
+                  <Label>PESCA RESPONSABLE · HOY</Label>
+                  <div style={{borderLeft:'2px solid rgba(52,211,153,0.45)',paddingLeft:10,fontFamily:MONO,fontSize:10,color:'#a7f3d0',lineHeight:1.75,marginBottom:12}}>
+                    {zonaActiva.predPesca}
+                  </div>
+                </>
+              )}
+
+              <Label>ALERTA CLAUDE · AHORA</Label>
+              {loadingPrediccion?(
+                <div style={{display:'flex',alignItems:'center',gap:8,paddingLeft:10}}>
+                  <span style={{width:5,height:5,background:'#6366f1',animation:'blink 0.8s step-start infinite',display:'inline-block'}}/>
+                  <span style={{fontFamily:MONO,fontSize:9,color:'#818cf8',letterSpacing:'0.15em'}}>GENERANDO CON CLAUDE AI...</span>
+                </div>
+              ):prediccionViva?.alerta&&(
+                <div style={{borderLeft:'2px solid rgba(99,102,241,0.45)',paddingLeft:10,fontFamily:MONO,fontSize:10,color:'#c4b5fd',lineHeight:1.75}}>
+                  <div style={{fontFamily:MONO,fontSize:8,color:'#64748b',letterSpacing:'0.18em',marginBottom:5}}>
+                    COPERNICUS · {prediccionViva.temp!=null?`${prediccionViva.temp}°C · `:''}DHW {prediccionViva.dhw??'—'}
+                  </div>
+                  {prediccionViva.alerta}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ══ PANEL DERECHO ══ */}
@@ -413,7 +825,7 @@ export default function CoralMap() {
             {zonaActiva&&(
               <div style={{position:'relative',flex:1,minHeight:0}}>
                 <div style={{position:'absolute',inset:0}}>
-                  <ReefViewer zone={zonaActiva.id} dhw={getDHWPorEstado(zonaActiva.estado)}
+                  <ReefViewer zone={zonaActiva.id} dhw={zonaActiva.dhw != null ? zonaActiva.dhw : getDHWPorEstado(zonaActiva.estado)} baa={zonaActiva.baa_numeric}
                     especies={zonaActiva.modelos??ESPECIES_POR_ZONA[zonaActiva.id]??especiesDesdeMetadata(zonaActiva)}
                     cobertura={zonaActiva.cobertura} descripcion={zonaActiva.descripcion}/>
                 </div>

@@ -81,12 +81,13 @@ def get_dato_actual(lat: float, lon: float) -> dict:
         return _fallback_actual(lat, lon)
 
 
-def get_historial_7d(lat: float, lon: float) -> list[dict]:
+def get_historial_nd(lat: float, lon: float, dias: int = 7) -> list[dict]:
     """
-    Retorna los últimos 7 días de DHW y SST para un punto.
+    Retorna los ultimos N dias de DHW y SST para un punto.
     Usado para calcular tendencia diaria.
     """
-    fecha_ini = _hace_n_dias(6)
+    dias = max(2, int(dias))
+    fecha_ini = _hace_n_dias(dias - 1)
     fecha_fin = _hoy()
     url = _url_punto(lat, lon, fecha_ini, fecha_fin)
     try:
@@ -105,7 +106,17 @@ def get_historial_7d(lat: float, lon: float) -> list[dict]:
         ]
     except Exception as e:
         print(f"[NOAA CRW] Error historial ({lat},{lon}): {e}")
-        return _fallback_historial(lat, lon)
+        return _fallback_historial(lat, lon, dias)
+
+
+def get_historial_7d(lat: float, lon: float) -> list[dict]:
+    """Retorna los ultimos 7 dias de DHW y SST."""
+    return get_historial_nd(lat, lon, 7)
+
+
+def get_historial_30d(lat: float, lon: float) -> list[dict]:
+    """Retorna los ultimos 30 dias de DHW y SST para proyecciones."""
+    return get_historial_nd(lat, lon, 30)
 
 
 def calcular_tendencia(historial: list[dict]) -> dict:
@@ -156,14 +167,14 @@ def _fallback_actual(lat: float, lon: float) -> dict:
         "fuente":       "Fallback — NOAA ERDDAP no disponible",
     }
 
-def _fallback_historial(lat: float, lon: float) -> list[dict]:
+def _fallback_historial(lat: float, lon: float, dias: int = 7) -> list[dict]:
     base = _fallback_actual(lat, lon)
     return [
         {
-            "fecha": _hace_n_dias(6 - i),
-            "dhw":   round(base["dhw"] - (6 - i) * 0.09, 4),
-            "sst":   round(base["sst"] - (6 - i) * 0.03, 2),
+            "fecha": _hace_n_dias((dias - 1) - i),
+            "dhw":   round(max(0, base["dhw"] - ((dias - 1) - i) * 0.03), 4),
+            "sst":   round(base["sst"] - ((dias - 1) - i) * 0.015, 2),
             "baa":   base["baa"],
         }
-        for i in range(7)
+        for i in range(dias)
     ]

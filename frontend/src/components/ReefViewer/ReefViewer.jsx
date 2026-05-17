@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import {
@@ -81,6 +81,26 @@ const CREADORES = {
   Pocillopora:   crearPocillopora,
   Acropora:      crearAcropora,
   Diploria:      crearDiploria,
+}
+
+function getPredictiveCoralColor(dhw = 0) {
+  const sano = new THREE.Color(0x22d3ee)
+  const estres = new THREE.Color(0xf97316)
+  const blanco = new THREE.Color(0xfffbeb)
+  if (dhw <= 4) {
+    return sano.lerp(estres, Math.max(0, Math.min(1, dhw / 4)))
+  }
+  return estres.lerp(blanco, Math.max(0, Math.min(1, (dhw - 4) / 8)))
+}
+
+function setCoralTargetColor(coral, dhw) {
+  const target = getPredictiveCoralColor(dhw)
+  coral.traverse(obj => {
+    if (obj.isMesh && obj.material?.color) {
+      obj.material.userData = obj.material.userData || {}
+      obj.material.userData.targetColor = target.clone()
+    }
+  })
 }
 
 // ─── Altura del suelo (determinista) ─────────────────────────────────────────
@@ -382,12 +402,14 @@ const TODAS_POSICIONES = Array.from({ length: MAX_POSICIONES }, (_, i) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // COMPONENTE PRINCIPAL
 // ─────────────────────────────────────────────────────────────────────────────
-export default function ReefViewer({ zone, dhw, especies: especiesProp, cobertura, descripcion }) {
+export default function ReefViewer({ zone, dhw, baa, especies: especiesProp, cobertura, descripcion, showHud = true }) {
   const mountRef    = useRef(null)
   const sceneRef    = useRef(null)
   const clockRef    = useRef(null)
   const rendererRef = useRef(null)
   const rocasRef    = useRef([])
+  const audioRef    = useRef(null) // Referencia para Bioacústica
+  const [audioIniciado, setAudioIniciado] = useState(false)
 
   // — grupos animados —
   const coralesRef  = useRef([])
@@ -409,9 +431,15 @@ export default function ReefViewer({ zone, dhw, especies: especiesProp, cobertur
     const W = mount.clientWidth
     const H = mount.clientHeight || 480
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true })
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: true,
+    })
     renderer.setSize(W, H)
-    renderer.setClearColor(0x051020)
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
+    renderer.setClearColor(0x000000, 0)
+    renderer.domElement.style.background = 'transparent'
+    renderer.domElement.style.display = 'block'
     mount.appendChild(renderer.domElement)
     rendererRef.current = renderer
 
@@ -420,6 +448,15 @@ export default function ReefViewer({ zone, dhw, especies: especiesProp, cobertur
 
     const camera = new THREE.PerspectiveCamera(60, W / H, 0.1, 200)
     camera.position.set(0, 8, 18)
+
+    const resizeObserver = new ResizeObserver(([entry]) => {
+      const width = Math.max(1, Math.floor(entry.contentRect.width))
+      const height = Math.max(1, Math.floor(entry.contentRect.height))
+      renderer.setSize(width, height)
+      camera.aspect = width / height
+      camera.updateProjectionMatrix()
+    })
+    resizeObserver.observe(mount)
 
     const controls = new OrbitControls(camera, renderer.domElement)
     controls.enableDamping  = true
@@ -559,7 +596,10 @@ export default function ReefViewer({ zone, dhw, especies: especiesProp, cobertur
 
     return () => {
       cancelAnimationFrame(animId)
-      mount.removeChild(renderer.domElement)
+      resizeObserver.disconnect()
+      if (renderer.domElement.parentNode === mount) {
+        mount.removeChild(renderer.domElement)
+      }
       renderer.dispose()
     }
   }, [])
@@ -574,9 +614,23 @@ export default function ReefViewer({ zone, dhw, especies: especiesProp, cobertur
     const fishBiomass  = Math.max(250, 3200 * healthFactor)
     const fishCount    = Math.max(0, Math.floor(fishBiomass / 400))
 
-    // Actualizar colores del agua y niebla según la ubicación
-    if (scene.fog) scene.fog.color.set(cfg.fogColor)
-    if (rendererRef.current) rendererRef.current.setClearColor(cfg.clearColor)
+    // Efecto WOW: Turbidez del Agua (Fog) dinámica según salud
+    if (scene.fog) {
+      const baseColor = new THREE.Color(cfg.fogColor);
+      const murkColor = new THREE.Color(0x2d4a22); // Agua turbia/sucia por algas y muerte coralina
+      baseColor.lerp(murkColor, 1 - healthFactor);
+      
+      scene.fog.color.copy(baseColor);
+      // A menor salud, mayor densidad de niebla (pérdida de claridad)
+      scene.fog.density = 0.025 + Math.pow(1 - healthFactor, 2) * 0.12;
+    }
+    
+    if (rendererRef.current) {
+      const baseClear = new THREE.Color(cfg.clearColor);
+      const murkClear = new THREE.Color(0x1a2a1a);
+      baseClear.lerp(murkClear, 1 - healthFactor);
+      rendererRef.current.setClearColor(baseClear, 0);
+    }
 
     // Limpiar todo lo vivo anterior
     ;[
@@ -601,10 +655,22 @@ export default function ReefViewer({ zone, dhw, especies: especiesProp, cobertur
     rocasRef.current = crearRocas(scene, cfg.rockColor)
 
     // — Corales: cantidad basada en cobertura REAL + salud —
-    // cobertura/50 normaliza: 50% = máximo (MAX_POSICIONES posiciones)
     const coberturaBase = cobertura ?? Math.max(4, Math.round(50 * healthFactor))
     const coralCount    = Math.max(1, Math.round((coberturaBase / 50) * MAX_POSICIONES * Math.max(0.08, healthFactor)))
-    const especies      = especiesProp || ESPECIES_POR_ZONA[zone] || []
+    
+    // Función para mapear nombres biológicos reales a los modelos 3D matemáticos
+    const mapEspecieAModelo = (nombre) => {
+      const n = nombre.toLowerCase();
+      if (n.includes('acropora') || n.includes('cuerno')) return 'Acropora';
+      if (n.includes('diploria') || n.includes('orbicella') || n.includes('montastraea') || n.includes('cerebro')) return 'Diploria';
+      if (n.includes('pocillopora')) return 'Pocillopora';
+      if (n.includes('porites')) return 'PoritesLobata';
+      return 'PoritesLobata'; // fallback
+    }
+
+    // Si recibimos especies reales de la API/Base, las mapeamos. Si no, usamos el mix predeterminado de la zona.
+    const especiesRaw = especiesProp && especiesProp.length > 0 ? especiesProp : (ESPECIES_POR_ZONA[zone] || ['PoritesLobata']);
+    const especies = especiesRaw.map(mapEspecieAModelo);
 
     TODAS_POSICIONES.slice(0, coralCount).forEach(([x, z], i) => {
       const especieId = especies[i % especies.length]
@@ -708,12 +774,60 @@ export default function ReefViewer({ zone, dhw, especies: especiesProp, cobertur
   const coberturaReal   = cobertura ?? Math.max(2, Math.round(50 * hf))
   const especiesDisplay = especiesProp || ESPECIES_POR_ZONA[zone] || []
 
+  // ─── Control de Volumen Bioacústico ───────────────────────────────────────
+  useEffect(() => {
+    if (audioRef.current) {
+      // El sonido del arrecife disminuye drásticamente cuando la salud cae.
+      // Se simula la pérdida de los chasquidos de camarones y peces.
+      const targetVolume = Math.max(0, hf - 0.1);
+      audioRef.current.volume = targetVolume;
+    }
+  }, [hf]);
+
+  const toggleAudio = () => {
+    if (audioRef.current) {
+      if (audioRef.current.paused) {
+        audioRef.current.play().catch(e => console.log('Audio error:', e));
+        setAudioIniciado(true);
+      } else {
+        audioRef.current.pause();
+        setAudioIniciado(false);
+      }
+    }
+  }
+
+  const handleInteraction = () => {
+    if (!audioIniciado && audioRef.current) {
+      audioRef.current.play().catch(e => console.log('Audio autoplay bloqueado', e));
+      setAudioIniciado(true);
+    }
+  }
+
   return (
-    <div style={{ position: 'relative', width: '100%', height: 480 }}>
+    <div style={{ position: 'relative', width: '100%', height: '100%', minHeight: showHud ? 360 : 0, overflow: 'hidden' }} onPointerDown={handleInteraction}>
+      {/* Pista de Audio Bioacústico (Placeholder). Reemplazar src con un mp3 real de ecosistema sano */}
+      <audio ref={audioRef} loop src="https://actions.google.com/sounds/v1/water/underwater_bubbles.ogg" crossOrigin="anonymous" />
+      
+      {/* Botón de Audio */}
+      {showHud && (
+      <button 
+        onClick={toggleAudio}
+        style={{
+          position: 'absolute', top: 12, right: 12, zIndex: 10,
+          background: 'rgba(10,18,40,0.88)', border: '1px solid rgba(6,182,212,0.4)',
+          color: '#67e8f9', padding: '6px 12px', borderRadius: 8,
+          cursor: 'pointer', fontFamily: 'monospace', fontSize: 12,
+          backdropFilter: 'blur(4px)'
+        }}>
+        {audioIniciado ? '🔊 AUDIO ON' : '🔇 AUDIO OFF'}
+      </button>
+      )}
+
       {/* Canvas Three.js */}
-      <div ref={mountRef} style={{ width: '100%', height: '100%', cursor: 'grab' }} />
+      <div ref={mountRef} style={{ width: '100%', height: '100%', cursor: 'grab', overflow: 'hidden' }} />
 
       {/* ── Panel izquierdo: métricas + especies ─────────────────────────── */}
+      {showHud && (
       <div style={{
         position: 'absolute', top: 12, left: 12,
         background: 'rgba(10,18,40,0.88)',
@@ -745,7 +859,7 @@ export default function ReefViewer({ zone, dhw, especies: especiesProp, cobertur
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 10 }}>
           {[
             { label: 'Cobertura', value: `${coberturaReal}%`, color: coberturaReal > 30 ? '#34d399' : coberturaReal > 15 ? '#fb923c' : '#f87171' },
-            { label: 'Alert Lvl', value: `${dhw < 4 ? 0 : dhw < 8 ? 1 : dhw < 16 ? 2 : 3}/3`, color: healthCSS },
+            { label: 'Alert Lvl', value: `${baa != null ? baa : (dhw < 4 ? 0 : dhw < 8 ? 1 : dhw < 16 ? 2 : 3)}/4`, color: healthCSS },
             { label: 'Esp. clave', value: cfg.indicatorSpecies.split(' ')[0], color: '#67e8f9' },
             { label: 'Salud', value: `${Math.round(hf * 100)}%`, color: healthCSS },
           ].map(({ label, value, color }) => (
@@ -795,8 +909,10 @@ export default function ReefViewer({ zone, dhw, especies: especiesProp, cobertur
           </div>
         )}
       </div>
+      )}
 
       {/* ── Panel derecho: leyenda + fauna ───────────────────────────────── */}
+      {showHud && (
       <div style={{
         position: 'absolute', top: 12, right: 12,
         background: 'rgba(10,18,40,0.88)',
@@ -831,6 +947,7 @@ export default function ReefViewer({ zone, dhw, especies: especiesProp, cobertur
           <div style={{ fontSize: 9, color: '#475569', marginTop: 2 }}>📍 {cfg.indicatorSpecies}</div>
         </div>
       </div>
+      )}
     </div>
   )
 }

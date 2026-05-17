@@ -274,5 +274,24 @@
       "salud": "Actualmente estamos en una condición 100% mejor que octubre 2023: DHW de 0 versus 12.8 crítico. Sin embargo, la SST ya superó el umbral (+0.28°C) por primera vez en la temporada. Estamos a 12.8 DHW de distancia del peor escenario histórico, lo que representa aproximadamente 8-10 semanas de exposición continua sobre el umbral para alcanzar ese nivel catastrófico.",
       "alerta": "Hermano pescador de Quintana Roo, el Banco Chinchorro está entrando en zona de riesgo con temperaturas sobre umbral, amenazando al Pez Loro Gigante y la salud del arrecife que sostiene tu pesca. Monitorea daily las condiciones y reporta cualquier coral blanqueado para actuar a tiempo."
     }
+  },
+  {
+    "slug": "los_cobanos",
+    "nombre": "Los Cóbanos",
+    "region": "Pacific Ocean",
+    "fecha": "2026-05-15",
+    "coordenadas": {
+      "lat": 13.525,
+      "lon": -89.825
+    },
+    "datos": {
+      "sst_max": 30.52,
+      "sst_min": 30.52,
+      "dhw": 1.11,
+      "stress_level": 2,
+      "bleaching_threshold": 29.5,
+      "baa_7day_max": 2,
+      "baa_label": "Alerta Calculada"
+    }
   }
 ]
