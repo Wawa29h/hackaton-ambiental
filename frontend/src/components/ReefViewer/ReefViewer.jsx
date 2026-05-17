@@ -16,9 +16,66 @@ const CREADORES = {
   Diploria:      crearDiploria,
 }
 
-export default function ReefViewer({ zone, dhw }) {
-  const mountRef = useRef(null)
-  const sceneRef = useRef(null)
+function crearSueloMarino() {
+  const geo = new THREE.PlaneGeometry(44, 32, 40, 30)
+  const pos = geo.attributes.position
+
+  // Desplazamiento de vértices para relieve orgánico
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i)
+    const z = pos.getZ(i)
+    const altura =
+      Math.sin(x * 0.25) * 0.6 +
+      Math.cos(z * 0.3) * 0.5 +
+      Math.sin((x + z) * 0.18) * 0.8 +
+      (Math.random() - 0.5) * 0.4   // rugosidad fina
+    pos.setZ(i, altura)
+  }
+  geo.computeVertexNormals()
+
+  const mat = new THREE.MeshLambertMaterial({
+    color: 0x0a2e1a,
+    wireframe: false,
+  })
+  const mesh = new THREE.Mesh(geo, mat)
+  mesh.rotation.x = -Math.PI / 2
+  mesh.position.y = -2.5
+  mesh.userData.suelo = true
+  return mesh
+}
+
+function crearRocas(scene) {
+  const mat = new THREE.MeshLambertMaterial({ color: 0x1a3a28 })
+  const rocas = []
+  for (let i = 0; i < 12; i++) {
+    const r = 0.3 + Math.random() * 0.7
+    const geo = new THREE.SphereGeometry(r, 6, 5)
+    // Deformar para que no sean perfectas
+    const v = geo.attributes.position
+    for (let j = 0; j < v.count; j++) {
+      v.setX(j, v.getX(j) * (0.8 + Math.random() * 0.4))
+      v.setY(j, v.getY(j) * (0.4 + Math.random() * 0.3))
+      v.setZ(j, v.getZ(j) * (0.8 + Math.random() * 0.4))
+    }
+    geo.computeVertexNormals()
+    const mesh = new THREE.Mesh(geo, mat)
+    mesh.position.set(
+      (Math.random() - 0.5) * 36,
+      -2.2 + r * 0.3,
+      (Math.random() - 0.5) * 24
+    )
+    mesh.rotation.y = Math.random() * Math.PI
+    mesh.userData.roca = true
+    scene.add(mesh)
+    rocas.push(mesh)
+  }
+  return rocas
+}
+
+export default function ReefViewer({ zone, dhw, especies: especiesProp }) {
+  const mountRef  = useRef(null)
+  const sceneRef  = useRef(null)
+  const coralesRef = useRef([])   // para animar
 
   useEffect(() => {
     const mount = mountRef.current
@@ -27,35 +84,59 @@ export default function ReefViewer({ zone, dhw }) {
 
     const renderer = new THREE.WebGLRenderer({ antialias: true })
     renderer.setSize(W, H)
-    renderer.setClearColor(0x0a1628)
+    renderer.setClearColor(0x051020)
     mount.appendChild(renderer.domElement)
 
+    // Niebla submarina suave
     const scene = new THREE.Scene()
-    const camera = new THREE.PerspectiveCamera(60, W / H, 0.1, 1000)
-    camera.position.set(0, 10, 20)
+    scene.fog = new THREE.FogExp2(0x051828, 0.035)
+
+    const camera = new THREE.PerspectiveCamera(60, W / H, 0.1, 200)
+    camera.position.set(0, 8, 18)
 
     const controls = new OrbitControls(camera, renderer.domElement)
     controls.enableDamping = true
+    controls.dampingFactor = 0.08
     controls.target.set(0, 0, 0)
+    controls.maxPolarAngle = Math.PI / 2.1   // no pasar del suelo
 
-    scene.add(new THREE.AmbientLight(0x224466, 1.5))
-    const dir = new THREE.DirectionalLight(0x88ccff, 2)
-    dir.position.set(5, 10, 5)
-    scene.add(dir)
+    // Luz ambiental azulada submarina
+    scene.add(new THREE.AmbientLight(0x1a4466, 2.0))
 
-    const floor = new THREE.Mesh(
-      new THREE.PlaneGeometry(40, 30),
-      new THREE.MeshLambertMaterial({ color: 0x0d2a1a })
-    )
-    floor.rotation.x = -Math.PI / 2
-    floor.position.y = -2
-    scene.add(floor)
+    // Luz cenital que simula el sol filtrado
+    const sol = new THREE.DirectionalLight(0x88ddff, 2.5)
+    sol.position.set(3, 12, 6)
+    scene.add(sol)
+
+    // Luz puntual verde-azul desde abajo para efecto de cáusticas
+    const caustica = new THREE.PointLight(0x00aaaa, 1.2, 25)
+    caustica.position.set(0, 1, 0)
+    scene.add(caustica)
+
+    // Suelo con relieve
+    scene.add(crearSueloMarino())
+    crearRocas(scene)
 
     sceneRef.current = scene
 
+    const clock = new THREE.Clock()
     let animId
+
     const animate = () => {
       animId = requestAnimationFrame(animate)
+      const t = clock.getElapsedTime()
+
+      // Oscilar cada coral como si hubiera corriente
+      coralesRef.current.forEach((coral, i) => {
+        const fase = i * 0.9          // cada coral desfasado
+        const amp  = coral.userData.ampOscilacion ?? 0.03
+        coral.rotation.z = Math.sin(t * 0.8 + fase) * amp
+        coral.rotation.x = Math.cos(t * 0.6 + fase * 1.3) * amp * 0.5
+      })
+
+      // Cáustica pulsante
+      caustica.intensity = 1.0 + Math.sin(t * 1.5) * 0.3
+
       controls.update()
       renderer.render(scene, camera)
     }
@@ -72,21 +153,28 @@ export default function ReefViewer({ zone, dhw }) {
     const scene = sceneRef.current
     if (!scene) return
 
-    const toRemove = scene.children.filter(c => c.userData.especie)
-    toRemove.forEach(c => scene.remove(c))
+    // Limpiar corales anteriores
+    coralesRef.current.forEach(c => scene.remove(c))
+    coralesRef.current = []
 
-    const especies = ESPECIES_POR_ZONA[zone] || []
-    const posiciones = generarPosiciones(20)
+    const especies  = especiesProp || ESPECIES_POR_ZONA[zone] || []
+    const posiciones = generarPosiciones(22)
 
     posiciones.forEach(([x, z], i) => {
       const especieId = especies[i % especies.length]
-      const crear = CREADORES[especieId]
-      if (crear) {
-        const coral = crear(x, z, dhw)
-        scene.add(coral)
-      }
+      const crear     = CREADORES[especieId]
+      if (!crear) return
+
+      const coral = crear(x, z, dhw)
+
+      // Amplitud de oscilación según especie: ramificados se mueven más
+      const esRamificado = especieId === 'Pocillopora' || especieId === 'Acropora'
+      coral.userData.ampOscilacion = esRamificado ? 0.07 : 0.025
+
+      scene.add(coral)
+      coralesRef.current.push(coral)
     })
-  }, [zone, dhw])
+  }, [zone, dhw, especiesProp])
 
   return (
     <div
@@ -98,7 +186,7 @@ export default function ReefViewer({ zone, dhw }) {
 
 function generarPosiciones(n) {
   return Array.from({ length: n }, () => [
-    (Math.random() - 0.5) * 28,
-    (Math.random() - 0.5) * 18,
+    (Math.random() - 0.5) * 30,
+    (Math.random() - 0.5) * 20,
   ])
 }
