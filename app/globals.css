@@ -5,56 +5,52 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Industrial scientific dark theme — #020617 / #070a13 base */
-  --background: #020617;
-  --foreground: #cbd5e1;
-  --card: #070a13;
-  --card-foreground: #cbd5e1;
-  --popover: #070a13;
-  --popover-foreground: #cbd5e1;
-  /* desaturated emerald — scientific, not neon */
-  --primary: #34d399;
-  --primary-foreground: #020617;
-  --secondary: #0f172a;
-  --secondary-foreground: #94a3b8;
-  --muted: #0f172a;
-  --muted-foreground: #475569;
-  --accent: #0f172a;
-  --accent-foreground: #cbd5e1;
-  --destructive: #ef4444;
-  --destructive-foreground: #cbd5e1;
-  /* ultra-thin dividers */
-  --border: #1e293b;
-  --input: #0f172a;
-  --ring: #34d399;
+  /* Oceanic Organic Theme */
+  --background: #06111e;
+  --foreground: #e2e8f0;
+  --card: #0b1a2e;
+  --card-foreground: #e2e8f0;
+  --popover: #0b1a2e;
+  --popover-foreground: #e2e8f0;
+  
+  /* Oceanic teals and cyans */
+  --primary: #0ea5e9;
+  --primary-foreground: #ffffff;
+  --secondary: #1e3a5f;
+  --secondary-foreground: #e0f2fe;
+  --muted: #11223c;
+  --muted-foreground: #94a3b8;
+  --accent: #0f2c4d;
+  --accent-foreground: #bae6fd;
+  
+  /* Corals/Pinks for alerts */
+  --destructive: #fb7185;
+  --destructive-foreground: #fff;
+  
+  /* Soft borders */
+  --border: #1e3a5f;
+  --input: #11223c;
+  --ring: #38bdf8;
 
   /* Custom dashboard tokens */
-  --reef-healthy: oklch(0.65 0.19 145);
-  --reef-stress: oklch(0.78 0.16 85);
-  --reef-bleaching: oklch(0.58 0.22 25);
-  --reef-critical: oklch(0.55 0.22 25);
-  --ocean-glow: oklch(0.65 0.15 190);
+  --reef-healthy: oklch(0.75 0.15 190);
+  --reef-stress: oklch(0.85 0.15 85);
+  --reef-bleaching: oklch(0.70 0.18 25);
+  --reef-critical: oklch(0.60 0.22 25);
+  --ocean-glow: oklch(0.75 0.15 220);
 
-  --chart-1: oklch(0.65 0.15 190);
-  --chart-2: oklch(0.65 0.19 145);
-  --chart-3: oklch(0.78 0.16 85);
-  --chart-4: oklch(0.58 0.22 25);
-  --chart-5: oklch(0.55 0.22 25);
+  --chart-1: oklch(0.75 0.15 220);
+  --chart-2: oklch(0.75 0.15 190);
+  --chart-3: oklch(0.85 0.15 85);
+  --chart-4: oklch(0.70 0.18 25);
+  --chart-5: oklch(0.60 0.22 25);
 
-  --radius: 0.625rem;
-  --sidebar: oklch(0.14 0.015 230);
-  --sidebar-foreground: oklch(0.93 0.01 220);
-  --sidebar-primary: oklch(0.65 0.15 190);
-  --sidebar-primary-foreground: oklch(0.12 0.015 230);
-  --sidebar-accent: oklch(0.22 0.02 230);
-  --sidebar-accent-foreground: oklch(0.93 0.01 220);
-  --sidebar-border: oklch(0.25 0.02 230);
-  --sidebar-ring: oklch(0.65 0.15 190);
+  --radius: 1.5rem;
 }
 
 @theme inline {
-  --font-sans: 'Geist', 'Geist Fallback';
-  --font-mono: 'JetBrains Mono', 'Geist Mono', 'Geist Mono Fallback', monospace;
+  --font-sans: 'Outfit', 'Inter', 'Geist Fallback';
+  --font-mono: 'Inter', 'Geist Mono', 'Geist Mono Fallback', sans-serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);

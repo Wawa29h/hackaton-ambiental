@@ -13,33 +13,31 @@ interface MetricCardProps {
 
 function MetricCard({ icon, label, value, unit, status, description }: MetricCardProps) {
   const accentColor = {
-    normal:   { border: "border-emerald-500/20", bar: "bg-emerald-500/40", text: "text-emerald-400", label: "text-emerald-500/60" },
-    warning:  { border: "border-amber-500/20",   bar: "bg-amber-500/40",   text: "text-amber-400",   label: "text-amber-500/60"   },
-    critical: { border: "border-red-500/25",      bar: "bg-red-500/50",     text: "text-red-400",     label: "text-red-500/60"     },
+    normal:   { border: "border-[#0ea5e9]/30", bar: "bg-[#0ea5e9]", glow: "shadow-[0_0_15px_rgba(14,165,233,0.15)]", bg: "bg-[#0ea5e9]/5", text: "text-[#38bdf8]", label: "text-[#0ea5e9]" },
+    warning:  { border: "border-amber-400/30",   bar: "bg-amber-400",   glow: "shadow-[0_0_15px_rgba(251,191,36,0.15)]", bg: "bg-amber-400/5", text: "text-amber-300",   label: "text-amber-400"   },
+    critical: { border: "border-rose-400/30",    bar: "bg-rose-500",    glow: "shadow-[0_0_15px_rgba(244,63,94,0.2)]", bg: "bg-rose-500/10", text: "text-rose-400",     label: "text-rose-400"     },
   }[status]
 
   return (
-    <div className={`relative border ${accentColor.border} bg-[#070a13] p-3 overflow-hidden`}>
+    <div className={`relative border ${accentColor.border} ${accentColor.bg} ${accentColor.glow} p-5 rounded-2xl backdrop-blur-md overflow-hidden transition-all duration-300 hover:-translate-y-1`}>
       {/* top accent bar */}
-      <div className={`absolute inset-x-0 top-0 h-px ${accentColor.bar}`} />
-      {/* corner pip */}
-      <span className={`absolute right-0 top-0 h-3 w-3 border-b border-l ${accentColor.border}`} />
+      <div className={`absolute inset-x-0 top-0 h-1 opacity-50 ${accentColor.bar}`} />
 
-      <div className="flex items-center gap-1.5 mb-3">
-        <span className="text-slate-600">{icon}</span>
-        <span className={`font-mono text-[9px] tracking-[0.18em] uppercase ${accentColor.label}`}>
+      <div className="flex items-center gap-2 mb-4">
+        <span className={`p-1.5 rounded-full bg-white/5 border border-white/10 ${accentColor.text}`}>{icon}</span>
+        <span className={`font-sans font-bold text-[10px] tracking-widest uppercase ${accentColor.label}`}>
           {label}
         </span>
       </div>
 
-      <div className="flex items-baseline gap-1">
-        <span className={`font-mono text-2xl font-bold leading-none tracking-tight ${accentColor.text}`}>
+      <div className="flex items-baseline gap-1.5">
+        <span className={`font-sans text-3xl font-bold leading-none tracking-tight ${accentColor.text}`}>
           {value}
         </span>
-        <span className="font-mono text-[11px] text-slate-600">{unit}</span>
+        <span className="font-sans font-medium text-xs text-slate-400">{unit}</span>
       </div>
 
-      <p className="mt-2 font-mono text-[9px] leading-relaxed text-slate-600 tracking-wide">
+      <p className="mt-3 font-sans text-[10px] leading-relaxed text-slate-400 font-medium">
         {description}
       </p>
     </div>
@@ -62,13 +60,13 @@ export default function MetricCards({ sst, dhw, viento }: MetricCardsProps) {
 
   return (
     <div>
-      <div className="mb-2 flex items-center gap-3">
-        <span className="font-mono text-[9px] tracking-[0.2em] text-slate-600 uppercase">
-          DATOS EN TIEMPO REAL
+      <div className="mb-4 flex items-center gap-3">
+        <span className="font-sans font-semibold text-[11px] tracking-[0.2em] text-slate-400 uppercase">
+          Métricas Oceánicas
         </span>
-        <div className="flex-1 h-px bg-slate-800" />
+        <div className="flex-1 h-px bg-gradient-to-r from-white/10 to-transparent" />
       </div>
-      <div className="grid grid-cols-2 gap-px bg-slate-800">
+      <div className="grid grid-cols-2 gap-4">
         <MetricCard
           icon={<Thermometer className="h-3.5 w-3.5" />}
           label="SST"

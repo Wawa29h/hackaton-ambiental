@@ -14,11 +14,12 @@ L.Icon.Default.mergeOptions({
 })
 
 // ── Design tokens ────────────────────────────────────────────────────────────
-const MONO  = "'JetBrains Mono','Fira Code','Courier New',monospace"
-const BG0   = '#020617'
-const BG1   = '#030712'
-const BG2   = '#070f1f'
-const B     = '1px solid rgba(30,41,59,0.9)'  // border slim
+const FONT_SANS = "'Outfit', system-ui, sans-serif"
+const FONT_DATA = "'Inter', system-ui, sans-serif"
+const BG0   = '#06111e'
+const BG1   = 'rgba(11, 26, 46, 0.7)'
+const BG2   = 'rgba(255, 255, 255, 0.05)'
+const B     = '1px solid rgba(255,255,255,0.08)'  // border glass
 
 // ── Datos base de arrecifes (datos biológicos fijos + fallback) ──────────────
 // Los campos dinámicos (estado, dhw, sst, predicciones) se sobreescriben con la API
@@ -68,10 +69,10 @@ function mergeZonasConApi(apiReefs) {
 }
 
 const CFG = {
-  sano:     { accent: '#34d399', label: 'SANO'      },
-  moderado: { accent: '#fbbf24', label: 'ESTRÉS'    },
-  riesgo:   { accent: '#f97316', label: 'EN RIESGO' },
-  critico:  { accent: '#ef4444', label: 'CRÍTICO'   },
+  sano:     { accent: '#0ea5e9', label: 'SANO'      },
+  moderado: { accent: '#f59e0b', label: 'ESTRÉS'    },
+  riesgo:   { accent: '#f43f5e', label: 'EN RIESGO' },
+  critico:  { accent: '#e11d48', label: 'CRÍTICO'   },
 }
 
 // ── Lógica de pesca responsable ──────────────────────────────────────────────
@@ -132,7 +133,7 @@ function createFishIcon(activo=false) {
       display:flex;align-items:center;justify-content:center;font-size:${activo?20:16}px;
       box-shadow:0 0 ${activo?16:8}px rgba(6,182,212,${activo?0.5:0.2})">🎣</div>`})
 }
-const STATUS_COLORS = {sano:'#34d399',moderado:'#fbbf24',riesgo:'#f97316',critico:'#ef4444'}
+const STATUS_COLORS = {sano:'#0ea5e9',moderado:'#f59e0b',riesgo:'#f43f5e',critico:'#e11d48'}
 const STATUS_LABELS = {sano:'Sano',moderado:'Estrés Térmico',riesgo:'En Riesgo',critico:'Blanqueamiento Severo'}
 function getDHWPorEstado(e){return e==='sano'?2:e==='moderado'?5:e==='riesgo'?9:13}
 function createGlowIcon(estado,activo=false){
@@ -152,18 +153,18 @@ const SP_PCT    = [100,94,61,80]
 // ── Componentes UI ────────────────────────────────────────────────────────────
 function Label({children}){
   return(
-    <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8}}>
-      <span style={{fontFamily:MONO,fontSize:8,color:'#334155',letterSpacing:'0.22em',textTransform:'uppercase',whiteSpace:'nowrap'}}>{children}</span>
-      <div style={{flex:1,height:1,background:'rgba(30,41,59,0.9)'}}/>
+    <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12}}>
+      <span style={{fontFamily:FONT_SANS,fontWeight:600,fontSize:10,color:'#94a3b8',letterSpacing:'0.2em',textTransform:'uppercase',whiteSpace:'nowrap'}}>{children}</span>
+      <div style={{flex:1,height:1,background:'linear-gradient(to right, rgba(255,255,255,0.1), transparent)'}}/>
     </div>
   )
 }
 function MetricBox({label,value,color}){
   return(
-    <div style={{background:BG0,padding:'10px 12px',position:'relative',overflow:'hidden'}}>
-      <div style={{position:'absolute',top:0,left:0,right:0,height:1,background:color+'55'}}/>
-      <div style={{fontFamily:MONO,fontSize:8,color:'#334155',letterSpacing:'0.18em',marginBottom:6}}>{label}</div>
-      <div style={{fontFamily:MONO,fontSize:18,fontWeight:700,lineHeight:1,color}}>{value}</div>
+    <div style={{background:'rgba(255,255,255,0.03)',border:B,borderRadius:16,padding:'12px 14px',position:'relative',overflow:'hidden',backdropFilter:'blur(10px)'}}>
+      <div style={{position:'absolute',top:0,left:0,right:0,height:3,background:color,opacity:0.8}}/>
+      <div style={{fontFamily:FONT_SANS,fontWeight:600,fontSize:9,color:'#94a3b8',letterSpacing:'0.15em',marginBottom:6}}>{label}</div>
+      <div style={{fontFamily:FONT_DATA,fontSize:22,fontWeight:700,lineHeight:1,color}}>{value}</div>
     </div>
   )
 }
@@ -262,45 +263,46 @@ export default function CoralMap() {
   const cfgActiva    = zonaActiva ? CFG[zonaActiva.estado] : null
 
   return (
-    <div style={{display:'flex',height:'100vh',background:BG0,overflow:'hidden',fontFamily:'system-ui,sans-serif'}}>
+    <div style={{display:'flex',height:'100vh',background:BG0,overflow:'hidden',fontFamily:FONT_SANS}}>
 
       {/* ══ SIDEBAR IZQUIERDO ══ */}
-      <div style={{width:220,flexShrink:0,background:BG1,borderRight:B,display:'flex',flexDirection:'column'}}>
+      <div style={{width:260,flexShrink:0,background:BG1,backdropFilter:'blur(24px)',borderRight:B,display:'flex',flexDirection:'column'}}>
 
         {/* Logo */}
-        <div style={{padding:'16px 16px 12px',borderBottom:B}}>
-          <div style={{fontFamily:MONO,fontSize:8,color:'#1e3a5f',letterSpacing:'0.25em',marginBottom:4}}>SYS // MONITOR</div>
-          <div style={{fontSize:14,fontWeight:700,color:'#f1f5f9',letterSpacing:'-0.01em'}}>CoralWatch</div>
-          <div style={{fontFamily:MONO,fontSize:8,color:'#134e4a',letterSpacing:'0.2em',marginTop:3}}>CARIBE · NOAA · LIVE</div>
+        <div style={{padding:'24px 20px 16px',borderBottom:B}}>
+          <div style={{fontFamily:FONT_SANS,fontWeight:600,fontSize:9,color:'#38bdf8',letterSpacing:'0.25em',marginBottom:6}}>SYS // MONITOR</div>
+          <div style={{fontSize:22,fontWeight:700,color:'#f1f5f9',letterSpacing:'-0.01em'}}>CoralWatch</div>
+          <div style={{fontFamily:FONT_SANS,fontWeight:600,fontSize:9,color:'#0ea5e9',letterSpacing:'0.2em',marginTop:4}}>CARIBE · NOAA · LIVE</div>
         </div>
 
         {/* Tabs */}
         <div style={{display:'flex',borderBottom:B}}>
           {[['arrecife','🪸 Arrecife'],['pesca','🎣 Pesca']].map(([t,label])=>(
             <button key={t} onClick={()=>setTab(t)} style={{
-              flex:1,padding:'8px 4px',fontFamily:MONO,fontSize:8,letterSpacing:'0.15em',textTransform:'uppercase',cursor:'pointer',
-              background:tab===t?'rgba(52,211,153,0.05)':'transparent',
-              borderBottom:tab===t?'2px solid #34d399':'2px solid transparent',
-              color:tab===t?'#34d399':'#334155',border:'none',borderBottom:tab===t?'2px solid #34d399':'2px solid transparent',
+              flex:1,padding:'12px 4px',fontFamily:FONT_SANS,fontWeight:600,fontSize:10,letterSpacing:'0.15em',textTransform:'uppercase',cursor:'pointer',
+              background:tab===t?'rgba(14, 165, 233, 0.1)':'transparent',
+              borderBottom:tab===t?'2px solid #0ea5e9':'2px solid transparent',
+              color:tab===t?'#0ea5e9':'#94a3b8',border:'none',borderBottom:tab===t?'2px solid #0ea5e9':'2px solid transparent',
             }}>{label}</button>
           ))}
         </div>
 
         {/* Lista de zonas */}
-        <div style={{flex:1,overflowY:'auto'}}>
+        <div style={{flex:1,overflowY:'auto',padding:'12px'}}>
           {tab==='arrecife' && zonasReales.map(z=>{
             const c=CFG[z.estado]
             const activo=zonaActiva?.id===z.id
             return(
               <button key={z.id} onClick={()=>abrirArrecife(z)} style={{
-                width:'100%',textAlign:'left',padding:'12px 16px',background:'transparent',
-                borderLeft:`2px solid ${activo?c.accent:'transparent'}`,
-                borderBottom:B,cursor:'pointer',
-                background:activo?'rgba(255,255,255,0.02)':'transparent',
+                width:'100%',textAlign:'left',padding:'14px 16px',background:'transparent',
+                border:`1px solid ${activo?c.accent+'66':'rgba(255,255,255,0.05)'}`,
+                borderRadius:16, cursor:'pointer', marginBottom:8,
+                background:activo?'rgba(255,255,255,0.05)':'rgba(255,255,255,0.02)',
+                boxShadow:activo?`0 0 15px ${c.accent}22`:''
               }}>
-                <div style={{fontFamily:MONO,fontSize:8,color:c.accent,letterSpacing:'0.2em',marginBottom:3}}>{c.label}</div>
-                <div style={{fontSize:12,fontWeight:600,color:'#e2e8f0',lineHeight:1.3,marginBottom:3}}>{z.nombre}</div>
-                <div style={{fontFamily:MONO,fontSize:9,color:'#334155'}}>{z.pais} · {z.cobertura}%</div>
+                <div style={{fontFamily:FONT_SANS,fontWeight:700,fontSize:9,color:c.accent,letterSpacing:'0.2em',marginBottom:4}}>{c.label}</div>
+                <div style={{fontSize:14,fontWeight:600,color:'#e2e8f0',lineHeight:1.3,marginBottom:4}}>{z.nombre}</div>
+                <div style={{fontFamily:FONT_SANS,fontWeight:500,fontSize:10,color:'#94a3b8'}}>{z.pais} · {z.cobertura}%</div>
               </button>
             )
           })}
@@ -309,23 +311,24 @@ export default function CoralMap() {
             const activo=pescaActiva?.id===z.id
             return(
               <button key={z.id} onClick={()=>abrirPesca(z)} style={{
-                width:'100%',textAlign:'left',padding:'12px 16px',background:'transparent',
-                borderLeft:`2px solid ${activo?z.estado?.color??'#06b6d4':'transparent'}`,
-                borderBottom:B,cursor:'pointer',
-                background:activo?'rgba(255,255,255,0.02)':'transparent',
+                width:'100%',textAlign:'left',padding:'14px 16px',background:'transparent',
+                border:`1px solid ${activo?(z.estado?.color??'#0ea5e9')+'66':'rgba(255,255,255,0.05)'}`,
+                borderRadius:16, cursor:'pointer', marginBottom:8,
+                background:activo?'rgba(255,255,255,0.05)':'rgba(255,255,255,0.02)',
+                boxShadow:activo?`0 0 15px ${z.estado?.color??'#0ea5e9'}22`:''
               }}>
-                <div style={{fontFamily:MONO,fontSize:8,color:z.estado?.color??'#06b6d4',letterSpacing:'0.2em',marginBottom:3}}>{z.estado?.label}</div>
-                <div style={{fontSize:12,fontWeight:600,color:'#e2e8f0',marginBottom:3}}>🎣 {z.nombre}</div>
-                <div style={{fontFamily:MONO,fontSize:9,color:'#334155'}}>DHW {z.dhw} · {z.viento}</div>
+                <div style={{fontFamily:FONT_SANS,fontWeight:700,fontSize:9,color:z.estado?.color??'#0ea5e9',letterSpacing:'0.2em',marginBottom:4}}>{z.estado?.label}</div>
+                <div style={{fontSize:14,fontWeight:600,color:'#e2e8f0',marginBottom:4}}>🎣 {z.nombre}</div>
+                <div style={{fontFamily:FONT_SANS,fontWeight:500,fontSize:10,color:'#94a3b8'}}>DHW {z.dhw} · {z.viento}</div>
               </button>
             )
           })}
         </div>
 
         {/* Footer API status */}
-        <div style={{padding:'10px 14px',borderTop:B,display:'flex',alignItems:'center',gap:6}}>
-          <span style={{width:5,height:5,background:apiOnline?'#34d399':'#fbbf24',display:'inline-block',animation:'blink 1.4s step-start infinite'}}/>
-          <span style={{fontFamily:MONO,fontSize:8,color:apiOnline?'#065f46':'#78350f',letterSpacing:'0.15em'}}>
+        <div style={{padding:'12px 16px',borderTop:B,display:'flex',alignItems:'center',gap:8,background:'rgba(255,255,255,0.02)'}}>
+          <span style={{width:8,height:8,borderRadius:'50%',background:apiOnline?'#0ea5e9':'#fbbf24',display:'inline-block',animation:'blink 1.4s step-start infinite',boxShadow:`0 0 8px ${apiOnline?'#0ea5e9':'#fbbf24'}`}}/>
+          <span style={{fontFamily:FONT_SANS,fontWeight:600,fontSize:10,color:apiOnline?'#38bdf8':'#fcd34d',letterSpacing:'0.15em'}}>
             {apiOnline?'API ONLINE':'CACHE LOCAL'}
           </span>
         </div>
@@ -353,17 +356,17 @@ export default function CoralMap() {
           {zonasReales.map(z=>(
             <Marker key={z.id} position={z.coords} icon={createGlowIcon(z.estado,zonaActiva?.id===z.id)} eventHandlers={{click:()=>abrirArrecife(z)}}>
               <Popup>
-                <div style={{background:BG1,color:'#e2e8f0',padding:'12px 14px',border:`1px solid ${STATUS_COLORS[z.estado]}33`,borderLeft:`3px solid ${STATUS_COLORS[z.estado]}`,fontFamily:MONO,minWidth:200,borderRadius:0}}>
-                  <div style={{fontSize:9,color:'#334155',letterSpacing:'0.2em',marginBottom:4}}>{z.pais.toUpperCase()}</div>
-                  <div style={{fontWeight:700,fontSize:13,marginBottom:8,color:'#f1f5f9',fontFamily:'system-ui'}}>{z.nombre}</div>
-                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'4px 10px',fontSize:10,color:'#475569',marginBottom:10}}>
+                <div style={{background:'rgba(11, 26, 46, 0.85)',backdropFilter:'blur(10px)',color:'#e2e8f0',padding:'16px',border:`1px solid ${STATUS_COLORS[z.estado]}66`,borderRadius:16,fontFamily:FONT_SANS,minWidth:220,boxShadow:'0 4px 30px rgba(0,0,0,0.5)'}}>
+                  <div style={{fontSize:10,fontWeight:600,color:'#94a3b8',letterSpacing:'0.2em',marginBottom:6}}>{z.pais.toUpperCase()}</div>
+                  <div style={{fontWeight:700,fontSize:16,marginBottom:12,color:'#f1f5f9'}}>{z.nombre}</div>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px 12px',fontSize:11,color:'#94a3b8',marginBottom:16}}>
                     <span>Cobertura</span><span style={{color:STATUS_COLORS[z.estado],fontWeight:700}}>{z.cobertura}%</span>
                     <span>Estado</span>  <span style={{color:STATUS_COLORS[z.estado],fontWeight:700}}>{STATUS_LABELS[z.estado]}</span>
                   </div>
                   <button onClick={()=>abrirArrecife(z)} style={{
-                    width:'100%',padding:'7px 0',background:`${STATUS_COLORS[z.estado]}12`,
-                    border:`1px solid ${STATUS_COLORS[z.estado]}44`,borderRadius:0,cursor:'pointer',
-                    color:STATUS_COLORS[z.estado],fontFamily:MONO,fontWeight:700,fontSize:9,letterSpacing:'0.15em',textTransform:'uppercase',
+                    width:'100%',padding:'10px 0',background:`${STATUS_COLORS[z.estado]}22`,
+                    border:`1px solid ${STATUS_COLORS[z.estado]}66`,borderRadius:8,cursor:'pointer',
+                    color:STATUS_COLORS[z.estado],fontFamily:FONT_SANS,fontWeight:700,fontSize:10,letterSpacing:'0.15em',textTransform:'uppercase',transition:'all 0.2s'
                   }}>VER ARRECIFE 3D →</button>
                 </div>
               </Popup>
@@ -372,22 +375,22 @@ export default function CoralMap() {
         </MapContainer>
 
         {/* HUD coords */}
-        <div style={{position:'absolute',bottom:12,left:12,zIndex:1000,background:BG1,border:B,padding:'5px 10px',fontFamily:MONO,fontSize:9,color:'#334155'}}>
+        <div style={{position:'absolute',bottom:16,left:16,zIndex:1000,background:'rgba(11,26,46,0.7)',backdropFilter:'blur(8px)',border:B,borderRadius:12,padding:'8px 12px',fontFamily:FONT_DATA,fontWeight:500,fontSize:10,color:'#94a3b8'}}>
           15.50°N · 85.00°W · Z6
         </div>
 
         {/* Leyenda */}
-        <div style={{position:'absolute',bottom:12,right:12,zIndex:1000,background:BG1,border:B,borderLeft:'2px solid rgba(52,211,153,0.2)',padding:'10px 14px'}}>
-          <div style={{fontFamily:MONO,fontSize:8,color:'rgba(52,211,153,0.5)',letterSpacing:'0.25em',marginBottom:8}}>RIESGO DE BLANQUEAMIENTO</div>
+        <div style={{position:'absolute',bottom:16,right:16,zIndex:1000,background:'rgba(11,26,46,0.7)',backdropFilter:'blur(8px)',border:B,borderRadius:16,padding:'16px'}}>
+          <div style={{fontFamily:FONT_SANS,fontWeight:700,fontSize:9,color:'#0ea5e9',letterSpacing:'0.25em',marginBottom:12}}>RIESGO DE BLANQUEAMIENTO</div>
           {Object.entries(STATUS_LABELS).map(([k,label])=>(
-            <div key={k} style={{display:'flex',alignItems:'center',gap:8,fontFamily:MONO,fontSize:10,color:'#e2e8f0',marginBottom:5}}>
-              <span style={{width:8,height:8,background:STATUS_COLORS[k],display:'inline-block',flexShrink:0}}/>
+            <div key={k} style={{display:'flex',alignItems:'center',gap:10,fontFamily:FONT_SANS,fontSize:11,color:'#e2e8f0',marginBottom:8}}>
+              <span style={{width:10,height:10,borderRadius:'50%',background:STATUS_COLORS[k],boxShadow:`0 0 8px ${STATUS_COLORS[k]}`,display:'inline-block',flexShrink:0}}/>
               {label}
             </div>
           ))}
-          <div style={{borderTop:B,marginTop:6,paddingTop:6}}>
-            <div style={{display:'flex',alignItems:'center',gap:8,fontFamily:MONO,fontSize:10,color:'#e2e8f0'}}>
-              <span style={{width:8,height:8,border:'1px dashed #06b6d4',display:'inline-block',flexShrink:0}}/>
+          <div style={{borderTop:B,marginTop:10,paddingTop:10}}>
+            <div style={{display:'flex',alignItems:'center',gap:10,fontFamily:FONT_SANS,fontSize:11,color:'#e2e8f0'}}>
+              <span style={{width:10,height:10,borderRadius:'50%',border:'2px dashed #0ea5e9',display:'inline-block',flexShrink:0}}/>
               Zona de Pesca
             </div>
           </div>
@@ -407,7 +410,7 @@ export default function CoralMap() {
             </div>
           </div>
 
-          <div style={{width:panelWidth,flexShrink:0,background:BG0,borderLeft:B,display:'flex',flexDirection:'column',overflowY:'auto',animation:'slideIn 0.25s ease'}}>
+          <div style={{width:panelWidth,flexShrink:0,background:'rgba(11,26,46,0.85)',backdropFilter:'blur(24px)',borderLeft:B,display:'flex',flexDirection:'column',overflowY:'auto',animation:'slideIn 0.25s ease'}}>
 
             {/* ── Panel Arrecife 3D ── */}
             {zonaActiva&&(
@@ -420,46 +423,46 @@ export default function CoralMap() {
 
                 {/* Cerrar */}
                 <button onClick={()=>setZonaActiva(null)} style={{
-                  position:'absolute',top:10,right:10,zIndex:20,background:BG1,border:B,
-                  color:'#334155',padding:'4px 12px',cursor:'pointer',fontFamily:MONO,fontSize:9,letterSpacing:'0.1em',
+                  position:'absolute',top:16,right:16,zIndex:20,background:'rgba(255,255,255,0.1)',backdropFilter:'blur(8px)',border:B,borderRadius:16,
+                  color:'#e2e8f0',padding:'8px 16px',cursor:'pointer',fontFamily:FONT_SANS,fontWeight:600,fontSize:10,letterSpacing:'0.1em',transition:'all 0.2s'
                 }}>✕ ESC</button>
 
                 {/* Overlay bottom */}
                 <div style={{
                   position:'absolute',bottom:0,left:0,right:0,zIndex:20,
-                  background:`linear-gradient(to top,${BG0}fd 0%,${BG0}e0 55%,transparent 100%)`,
-                  backdropFilter:'blur(12px)',padding:'40px 14px 14px',
+                  background:`linear-gradient(to top, rgba(6,17,30,0.95) 0%, rgba(6,17,30,0.8) 55%, transparent 100%)`,
+                  padding:'60px 24px 24px',
                 }}>
                   {/* País + nombre */}
-                  <div style={{marginBottom:12}}>
-                    <div style={{fontFamily:MONO,fontSize:8,color:'#334155',letterSpacing:'0.2em',marginBottom:4}}>{zonaActiva.pais.toUpperCase()}</div>
-                    <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:8,flexWrap:'wrap'}}>
-                      <span style={{fontSize:20,fontWeight:700,color:'#f1f5f9',letterSpacing:'-0.02em'}}>{zonaActiva.nombre}</span>
-                      <span style={{fontFamily:MONO,fontSize:8,padding:'3px 8px',background:`${cfgActiva.accent}12`,
-                        border:`1px solid ${cfgActiva.accent}44`,color:cfgActiva.accent,letterSpacing:'0.15em',fontWeight:700}}>
+                  <div style={{marginBottom:16}}>
+                    <div style={{fontFamily:FONT_SANS,fontWeight:600,fontSize:10,color:'#94a3b8',letterSpacing:'0.2em',marginBottom:6}}>{zonaActiva.pais.toUpperCase()}</div>
+                    <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:12,flexWrap:'wrap'}}>
+                      <span style={{fontSize:28,fontWeight:700,color:'#f1f5f9',letterSpacing:'-0.02em'}}>{zonaActiva.nombre}</span>
+                      <span style={{fontFamily:FONT_SANS,fontSize:10,padding:'4px 12px',borderRadius:16,background:`${cfgActiva.accent}22`,
+                        border:`1px solid ${cfgActiva.accent}66`,color:cfgActiva.accent,letterSpacing:'0.15em',fontWeight:700}}>
                         {cfgActiva.label}
                       </span>
                     </div>
-                    <div style={{display:'inline-flex',alignItems:'center',gap:6,fontFamily:MONO,fontSize:8,
-                      color:cfgActiva.accent,borderLeft:`2px solid ${cfgActiva.accent}`,paddingLeft:8,letterSpacing:'0.12em'}}>
-                      <span style={{width:5,height:5,background:cfgActiva.accent,animation:'blink 1.4s step-start infinite'}}/>
+                    <div style={{display:'inline-flex',alignItems:'center',gap:8,fontFamily:FONT_SANS,fontWeight:600,fontSize:10,
+                      color:cfgActiva.accent,background:'rgba(255,255,255,0.05)',borderRadius:16,padding:'6px 12px',letterSpacing:'0.12em'}}>
+                      <span style={{width:8,height:8,borderRadius:'50%',background:cfgActiva.accent,animation:'blink 1.4s step-start infinite',boxShadow:`0 0 8px ${cfgActiva.accent}`}}/>
                       {cfgActiva.label} · {zonaActiva.cobertura}% COBERTURA
                     </div>
                   </div>
 
                   {/* Métricas — datos reales de NOAA */}
-                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr',gap:3,marginBottom:14}}>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr',gap:8,marginBottom:20}}>
                     <MetricBox label="COBERTURA" value={`${zonaActiva.cobertura}%`}
                       color={cfgActiva.accent}/>
                     <MetricBox label="DHW"
                       value={zonaActiva.dhw!=null?zonaActiva.dhw.toFixed(1):'—'}
-                      color={zonaActiva.dhw>4?'#ef4444':zonaActiva.dhw>1?'#f59e0b':'#34d399'}/>
+                      color={zonaActiva.dhw>4?'#ef4444':zonaActiva.dhw>1?'#f59e0b':'#f59e0b'}/>
                     <MetricBox label="SST"
                       value={zonaActiva.sst!=null?`${zonaActiva.sst.toFixed(1)}°`:'—'}
-                      color="#f97316"/>
+                      color="#f59e0b"/>
                     <MetricBox label="ESP. CLAVE"
                       value={zonaActiva.especies?.[0]?.split(' ').pop()??'—'}
-                      color="#38bdf8"/>
+                      color="#0ea5e9"/>
                   </div>
                   {/* Viento y fecha si hay datos reales */}
                   {zonaActiva.viento&&(
@@ -471,21 +474,21 @@ export default function CoralMap() {
 
                   {/* Especies */}
                   <Label>ESPECIES DOMINANTES</Label>
-                  <div style={{display:'flex',flexDirection:'column',gap:6,marginBottom:12}}>
+                  <div style={{display:'flex',flexDirection:'column',gap:8,marginBottom:16}}>
                     {(zonaActiva.especies??[]).slice(0,4).map((esp,i)=>(
                       <div key={esp}>
-                        <div style={{display:'flex',justifyContent:'space-between',marginBottom:3}}>
-                          <span style={{fontSize:10,color:'#94a3b8',fontStyle:'italic'}}>{esp}</span>
-                          <span style={{fontFamily:MONO,fontSize:10,color:SP_COLORS[i],fontWeight:700}}>{SP_PCT[i]}%</span>
+                        <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
+                          <span style={{fontSize:11,color:'#94a3b8',fontStyle:'italic',fontFamily:FONT_SANS}}>{esp}</span>
+                          <span style={{fontFamily:FONT_DATA,fontSize:11,color:SP_COLORS[i],fontWeight:700}}>{SP_PCT[i]}%</span>
                         </div>
-                        <div style={{height:2,background:'rgba(255,255,255,0.05)'}}>
-                          <div style={{width:`${SP_PCT[i]}%`,height:'100%',background:SP_COLORS[i],transition:'width 0.8s cubic-bezier(0.16,1,0.3,1)'}}/>
+                        <div style={{height:4,borderRadius:2,background:'rgba(255,255,255,0.05)'}}>
+                          <div style={{width:`${SP_PCT[i]}%`,height:'100%',borderRadius:2,background:SP_COLORS[i],transition:'width 0.8s cubic-bezier(0.16,1,0.3,1)'}}/>
                         </div>
                       </div>
                     ))}
                   </div>
 
-                  <div style={{fontFamily:MONO,fontSize:9,color:'#334155',lineHeight:1.7,borderTop:B,paddingTop:8,marginBottom:10}}>
+                  <div style={{fontFamily:FONT_SANS,fontSize:12,color:'#94a3b8',lineHeight:1.7,borderTop:B,paddingTop:12,marginBottom:10}}>
                     {zonaActiva.descripcion}
                   </div>
 
@@ -529,75 +532,75 @@ export default function CoralMap() {
             {/* ── Panel Pesca ── */}
             {pescaActiva&&(
               <>
-                <div style={{padding:'14px 16px',background:BG1,borderBottom:B,borderLeft:`2px solid ${pescaActiva.estado?.color??'#06b6d4'}`,display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
+                <div style={{padding:'20px 24px',background:'rgba(255,255,255,0.02)',borderBottom:B,borderLeft:`4px solid ${pescaActiva.estado?.color??'#0ea5e9'}`,display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
                   <div>
-                    <div style={{fontFamily:MONO,fontSize:8,color:'#334155',letterSpacing:'0.2em',marginBottom:4}}>ZONA DE PESCA RESPONSABLE</div>
-                    <div style={{fontSize:15,fontWeight:700,color:'#f1f5f9',marginBottom:8}}>🎣 {pescaActiva.nombre}</div>
-                    <div style={{display:'inline-flex',alignItems:'center',gap:6,fontFamily:MONO,fontSize:8,padding:'3px 8px',
-                      background:`${pescaActiva.estado?.color}12`,border:`1px solid ${pescaActiva.estado?.color}44`,
+                    <div style={{fontFamily:FONT_SANS,fontWeight:600,fontSize:10,color:'#94a3b8',letterSpacing:'0.2em',marginBottom:6}}>ZONA DE PESCA RESPONSABLE</div>
+                    <div style={{fontSize:20,fontWeight:700,color:'#f1f5f9',marginBottom:10}}>🎣 {pescaActiva.nombre}</div>
+                    <div style={{display:'inline-flex',alignItems:'center',gap:8,fontFamily:FONT_SANS,fontSize:10,padding:'6px 12px',borderRadius:16,
+                      background:`${pescaActiva.estado?.color}22`,border:`1px solid ${pescaActiva.estado?.color}66`,
                       color:pescaActiva.estado?.color,letterSpacing:'0.15em',fontWeight:700}}>
                       {pescaActiva.estado?.label} · MÁX {pescaActiva.estado?.maxLanchas} LANCHAS
                     </div>
                   </div>
-                  <button onClick={()=>setPescaActiva(null)} style={{background:'transparent',border:B,color:'#334155',padding:'4px 10px',cursor:'pointer',fontFamily:MONO,fontSize:9}}>✕</button>
+                  <button onClick={()=>setPescaActiva(null)} style={{background:'rgba(255,255,255,0.05)',border:B,borderRadius:16,color:'#e2e8f0',padding:'8px 12px',cursor:'pointer',fontFamily:FONT_SANS,fontSize:12}}>✕</button>
                 </div>
 
-                <div style={{padding:'14px 16px',display:'flex',flexDirection:'column',gap:10}}>
+                <div style={{padding:'24px',display:'flex',flexDirection:'column',gap:16}}>
                   {/* Métricas */}
-                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:3}}>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
                     {[
-                      {label:'TEMP. MAR',  value:pescaActiva.sst,                          color:'#f97316'},
+                      {label:'TEMP. MAR',  value:pescaActiva.sst,                          color:'#f59e0b'},
                       {label:'DHW',        value:`${pescaActiva.dhw}`,                     color:pescaActiva.estado?.color},
                       {label:'VIENTO',     value:pescaActiva.viento,                       color:'#94a3b8'},
-                      {label:'SOTAVENTO',  value:pescaActiva.sotaventoDe??'O',             color:'#67e8f9'},
+                      {label:'SOTAVENTO',  value:pescaActiva.sotaventoDe??'O',             color:'#38bdf8'},
                     ].map(m=><MetricBox key={m.label} {...m}/>)}
                   </div>
 
                   {/* Estado */}
-                  <div style={{borderLeft:`2px solid ${pescaActiva.estado?.color}`,paddingLeft:12}}>
-                    <div style={{fontFamily:MONO,fontSize:8,color:'#334155',letterSpacing:'0.18em',marginBottom:6}}>ESTADO DEL ARRECIFE</div>
-                    <div style={{fontSize:13,fontWeight:700,color:pescaActiva.estado?.color,marginBottom:4}}>
+                  <div style={{borderLeft:`3px solid ${pescaActiva.estado?.color}`,paddingLeft:16,background:'rgba(255,255,255,0.02)',borderRadius:'0 16px 16px 0',padding:'12px 16px'}}>
+                    <div style={{fontFamily:FONT_SANS,fontWeight:600,fontSize:9,color:'#94a3b8',letterSpacing:'0.18em',marginBottom:6}}>ESTADO DEL ARRECIFE</div>
+                    <div style={{fontSize:16,fontWeight:700,color:pescaActiva.estado?.color,marginBottom:6}}>
                       {pescaActiva.estado?.label}
-                      {pescaActiva.estado?.maxLanchas>0&&<span style={{fontFamily:MONO,fontSize:9,fontWeight:400,color:'#475569',marginLeft:10}}>MÁX {pescaActiva.estado.maxLanchas}</span>}
+                      {pescaActiva.estado?.maxLanchas>0&&<span style={{fontFamily:FONT_SANS,fontSize:11,fontWeight:500,color:'#94a3b8',marginLeft:12}}>MÁX {pescaActiva.estado.maxLanchas}</span>}
                     </div>
-                    <div style={{fontFamily:MONO,fontSize:9,color:'#475569',lineHeight:1.7}}>{pescaActiva.estado?.descripcion}</div>
+                    <div style={{fontFamily:FONT_SANS,fontSize:11,color:'#cbd5e1',lineHeight:1.7}}>{pescaActiva.estado?.descripcion}</div>
                   </div>
 
                   {/* Predicción Claude en tiempo real */}
                   <Label>PREDICCIÓN CLAUDE · TIEMPO REAL</Label>
                   {loadingPrediccion?(
-                    <div style={{borderLeft:'2px solid rgba(99,102,241,0.4)',paddingLeft:12,display:'flex',alignItems:'center',gap:8}}>
-                      <span style={{width:5,height:5,background:'#6366f1',animation:'blink 0.8s step-start infinite',display:'inline-block'}}/>
-                      <span style={{fontFamily:MONO,fontSize:9,color:'#6366f1',letterSpacing:'0.15em'}}>GENERANDO CON CLAUDE AI...</span>
+                    <div style={{borderLeft:'3px solid rgba(99,102,241,0.5)',paddingLeft:16,display:'flex',alignItems:'center',gap:8}}>
+                      <span style={{width:8,height:8,borderRadius:'50%',background:'#6366f1',animation:'blink 0.8s step-start infinite',display:'inline-block'}}/>
+                      <span style={{fontFamily:FONT_SANS,fontSize:10,fontWeight:600,color:'#6366f1',letterSpacing:'0.15em'}}>GENERANDO CON CLAUDE AI...</span>
                     </div>
                   ):prediccionViva?.alerta?(
-                    <div style={{borderLeft:'2px solid rgba(6,182,212,0.4)',paddingLeft:12,fontFamily:MONO,fontSize:9,color:'#94a3b8',lineHeight:1.8}}>
-                      <div style={{fontFamily:MONO,fontSize:7,color:'#1e3a5f',letterSpacing:'0.2em',marginBottom:6}}>
+                    <div style={{borderLeft:'3px solid rgba(14,165,233,0.5)',paddingLeft:16,fontFamily:FONT_SANS,fontSize:11,color:'#cbd5e1',lineHeight:1.8}}>
+                      <div style={{fontFamily:FONT_SANS,fontSize:9,fontWeight:600,color:'#94a3b8',letterSpacing:'0.2em',marginBottom:6}}>
                         CLAUDE · {prediccionViva.temp!=null?`${prediccionViva.temp}°C · `:''}DHW {prediccionViva.dhw??'—'} · AHORA
                       </div>
                       {prediccionViva.alerta}
                       {prediccionViva.veda?.mensaje&&(
-                        <div style={{marginTop:8,fontFamily:MONO,fontSize:8,color:prediccionViva.veda.color??'#34d399',borderTop:'1px solid rgba(30,41,59,0.9)',paddingTop:6}}>
+                        <div style={{marginTop:8,fontFamily:FONT_SANS,fontSize:10,color:prediccionViva.veda.color??'#0ea5e9',borderTop:B,paddingTop:8}}>
                           {prediccionViva.veda.label} — {prediccionViva.veda.mensaje}
                         </div>
                       )}
                     </div>
                   ):(
-                    <div style={{borderLeft:`2px solid ${pescaActiva.estado?.color}`,paddingLeft:12,fontFamily:MONO,fontSize:9,color:'#e2e8f0',lineHeight:1.8}}>
-                      <strong style={{color:pescaActiva.estado?.color,display:'block',marginBottom:4,letterSpacing:'0.1em',fontSize:8}}>
+                    <div style={{borderLeft:`3px solid ${pescaActiva.estado?.color}`,paddingLeft:16,fontFamily:FONT_SANS,fontSize:11,color:'#e2e8f0',lineHeight:1.8}}>
+                      <strong style={{color:pescaActiva.estado?.color,display:'block',marginBottom:6,letterSpacing:'0.1em',fontSize:10}}>
                         {pescaActiva.estado?.permitida?'PREDICCIÓN':'⛔ ZONA NO DISPONIBLE HOY'}
                       </strong>
-                      <span style={{color:'#475569'}}>{pescaActiva.prediccion??pescaActiva.estado?.descripcion}</span>
+                      <span style={{color:'#94a3b8'}}>{pescaActiva.prediccion??pescaActiva.estado?.descripcion}</span>
                     </div>
                   )}
 
                   {/* Educación */}
-                  <div style={{borderLeft:'2px solid rgba(52,211,153,0.2)',paddingLeft:12,fontFamily:MONO,fontSize:9,color:'#6ee7b7',lineHeight:1.7}}>
+                  <div style={{borderLeft:'3px solid rgba(14,165,233,0.3)',paddingLeft:16,fontFamily:FONT_SANS,fontSize:11,color:'#38bdf8',lineHeight:1.7}}>
                     🪸 DHW {pescaActiva.dhw} — {pescaActiva.dhw<1?'coral sano y produciendo larvas.':pescaActiva.dhw<4?'estrés leve. Pesca con cuidado.':pescaActiva.dhw<8?'coral sufre. Menos refugio = menos peces.':'coral blanquea. Pesquería afectada.'}
                   </div>
 
                   {pescaActiva.alerta&&(
-                    <div style={{borderLeft:'2px solid rgba(239,68,68,0.4)',paddingLeft:12,fontFamily:MONO,fontSize:9,color:'#fca5a5',lineHeight:1.7}}>
+                    <div style={{borderLeft:'3px solid rgba(244,63,94,0.5)',paddingLeft:16,fontFamily:FONT_SANS,fontSize:11,color:'#fb7185',lineHeight:1.7}}>
                       ⚠️ {pescaActiva.alerta}
                     </div>
                   )}
@@ -609,9 +612,9 @@ export default function CoralMap() {
       )}
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap');
-        @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(1.5)}}
-        @keyframes blink{0%,100%{opacity:1}50%{opacity:0.15}}
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap');
+        @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(1.4)}}
+        @keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
         @keyframes slideIn{from{transform:translateX(30px);opacity:0}to{transform:translateX(0);opacity:1}}
         .leaflet-popup-content-wrapper{background:transparent!important;box-shadow:none!important;padding:0!important;border-radius:0!important}
         .leaflet-popup-content{margin:0!important}

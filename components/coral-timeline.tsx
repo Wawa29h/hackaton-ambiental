@@ -13,9 +13,9 @@ const TIMELINE_DATA = [
 ]
 
 const STATUS_CFG = {
-  healthy:   { dot: "bg-emerald-400", line: "border-emerald-500/30", year: "text-emerald-400" },
+  healthy:   { dot: "bg-[#0ea5e9]", line: "border-[#0ea5e9]/30", year: "text-[#38bdf8]" },
   stress:    { dot: "bg-amber-400",   line: "border-amber-500/30",   year: "text-amber-400"   },
-  bleaching: { dot: "bg-red-400",     line: "border-red-500/30",     year: "text-red-400"     },
+  bleaching: { dot: "bg-rose-400",     line: "border-rose-500/30",     year: "text-rose-400"     },
 }
 
 interface CoralTimelineProps {
@@ -24,40 +24,40 @@ interface CoralTimelineProps {
 
 export default function CoralTimeline({ interanual }: CoralTimelineProps) {
   return (
-    <div className="border border-slate-800 bg-[#070a13]">
+    <div className="bg-[#0b1a2e]/40 backdrop-blur-sm border border-white/10 rounded-3xl overflow-hidden shadow-sm p-2">
       {/* header */}
-      <div className="flex items-center gap-3 border-b border-slate-800 px-4 py-3">
-        <Clock className="h-3.5 w-3.5 text-slate-600" />
-        <span className="font-mono text-[11px] font-semibold tracking-[0.12em] uppercase text-slate-200">
+      <div className="flex items-center gap-3 px-4 py-3">
+        <Clock className="h-4 w-4 text-[#38bdf8]" />
+        <span className="font-sans text-[13px] font-bold tracking-[0.1em] uppercase text-white">
           Declive Histórico
         </span>
-        <div className="flex-1 h-px bg-slate-800" />
-        <span className="font-mono text-[9px] text-slate-600 tracking-widest">CARIBE · 1970–2026</span>
+        <div className="flex-1 h-px bg-gradient-to-r from-white/10 to-transparent" />
+        <span className="font-sans font-medium text-[10px] text-slate-400 tracking-widest">CARIBE · 1970–2026</span>
       </div>
 
       <div className="px-4 py-3">
         <div className="relative ml-2">
           {/* vertical rail */}
-          <div className="absolute left-[4px] top-0 bottom-0 w-px bg-slate-800" />
+          <div className="absolute left-[4px] top-2 bottom-2 w-[2px] rounded-full bg-white/5" />
 
-          <div className="space-y-3">
+          <div className="space-y-4">
             {TIMELINE_DATA.map((item) => {
               const cfg = STATUS_CFG[item.status]
               return (
-                <div key={item.year} className="relative flex gap-4 pl-5">
+                <div key={item.year} className="relative flex gap-5 pl-6 group">
                   {/* dot */}
-                  <div className={`absolute left-0 top-[5px] h-2 w-2 ${cfg.dot} rounded-none`} />
+                  <div className={`absolute left-0 top-[6px] h-2.5 w-2.5 ${cfg.dot} rounded-full shadow-[0_0_8px_currentColor] transition-transform group-hover:scale-125`} />
 
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-3 mb-0.5">
-                      <span className={`font-mono text-[11px] font-bold ${cfg.year}`}>
+                    <div className="flex items-center gap-3 mb-1">
+                      <span className={`font-sans text-[13px] font-bold ${cfg.year}`}>
                         {item.year}
                       </span>
-                      <div className={`border ${cfg.line} px-1.5 py-0.5`}>
-                        <span className="font-mono text-[9px] text-slate-300">{item.cover}</span>
+                      <div className={`border ${cfg.line} bg-white/5 rounded-full px-2 py-0.5`}>
+                        <span className="font-sans text-[10px] font-semibold text-slate-300">{item.cover}</span>
                       </div>
                     </div>
-                    <p className="font-mono text-[10px] leading-relaxed text-slate-500">
+                    <p className="font-sans text-[11px] leading-relaxed text-slate-400">
                       {item.event}
                     </p>
                   </div>
@@ -68,14 +68,14 @@ export default function CoralTimeline({ interanual }: CoralTimelineProps) {
         </div>
 
         {/* degradation bar */}
-        <div className="mt-4 border-t border-slate-800 pt-3">
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="font-mono text-[9px] text-slate-600 tracking-widest uppercase">Pérdida acumulada</span>
-            <span className="font-mono text-[10px] font-bold text-red-400">89%</span>
+        <div className="mt-5 border-t border-white/10 pt-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="font-sans font-medium text-[10px] text-slate-400 tracking-widest uppercase">Pérdida acumulada</span>
+            <span className="font-sans text-[12px] font-bold text-rose-400">89%</span>
           </div>
-          <div className="h-1 bg-slate-800 w-full">
+          <div className="h-1.5 bg-white/5 rounded-full w-full overflow-hidden shadow-inner">
             <div
-              className="h-full bg-gradient-to-r from-emerald-500 via-amber-500 to-red-500"
+              className="h-full bg-gradient-to-r from-[#0ea5e9] via-amber-400 to-rose-500"
               style={{ width: "89%" }}
             />
           </div>

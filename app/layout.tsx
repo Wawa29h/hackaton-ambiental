@@ -1,10 +1,10 @@
 import type { Metadata, Viewport } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
+import { Outfit, Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
+const outfit = Outfit({ subsets: ["latin"], variable: '--font-sans' });
+const inter = Inter({ subsets: ["latin"], variable: '--font-mono' });
 
 export const metadata: Metadata = {
   title: 'CoralWatch Caribbean — Reef Monitoring Dashboard',
@@ -40,8 +40,8 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="es" className="bg-background">
-      <body className="font-sans antialiased">
+    <html lang="es" className={`${outfit.variable} ${inter.variable} bg-background`}>
+      <body className="font-sans antialiased bg-[#06111e] text-slate-200">
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
