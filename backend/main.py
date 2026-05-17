@@ -26,6 +26,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Rutas de Copernicus + veda dinámica
+try:
+    from routes.coral import router as coral_router
+    app.include_router(coral_router)
+except Exception as _e:
+    print(f"[main] No se pudo cargar routes/coral.py: {_e}")
+
 
 class MakeWebhookRequest(BaseModel):
     webhook_url: str
