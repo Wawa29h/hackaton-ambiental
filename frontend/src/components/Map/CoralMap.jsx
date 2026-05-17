@@ -130,13 +130,47 @@ function MetricBox({label,value,color}){
 }
 
 export default function CoralMap() {
-  const [zonaActiva,  setZonaActiva]  = useState(null)
-  const [pescaActiva, setPescaActiva] = useState(null)
-  const [reefGeoJson, setReefGeoJson] = useState(null)
-  const [zonasPesca,  setZonasPesca]  = useState(ZONAS_PESCA_FALLBACK)
-  const [apiOnline,   setApiOnline]   = useState(false)
-  const [tab,         setTab]         = useState('arrecife') // 'arrecife' | 'pesca'
-  const [panelWidth,  setPanelWidth]  = useState(380)
+  const [zonaActiva,       setZonaActiva]       = useState(null)
+  const [pescaActiva,      setPescaActiva]      = useState(null)
+  const [reefGeoJson,      setReefGeoJson]      = useState(null)
+  const [zonasPesca,       setZonasPesca]       = useState(ZONAS_PESCA_FALLBACK)
+  const [apiOnline,        setApiOnline]        = useState(false)
+  const [tab,              setTab]              = useState('arrecife')
+  const [panelWidth,       setPanelWidth]       = useState(380)
+  const [prediccionViva,   setPrediccionViva]   = useState(null)
+  const [loadingPrediccion,setLoadingPrediccion]= useState(false)
+
+  // Mapeo zona frontend → ID del endpoint /api/zona/{id}
+  const ZONA_API_ID = {
+    los_cobanos:    'los_cobanos',
+    roatan:         'roatan',
+    cozumel:        'cozumel',
+    cayos_miskitos: 'cayos_miskitos',
+    pesca_roatan:   'roatan',
+    pesca_nicaragua:'cayos_miskitos',
+    pesca_cozumel:  'cozumel',
+  }
+
+  async function fetchPrediccionViva(zonaId) {
+    const apiId = ZONA_API_ID[zonaId]
+    if (!apiId) return
+    setLoadingPrediccion(true)
+    setPrediccionViva(null)
+    try {
+      const res  = await fetch(`${API_URL}/api/zona/${apiId}/estado-completo`)
+      const data = await res.json()
+      setPrediccionViva({
+        alerta:  data.alerta_pescador ?? null,
+        veda:    data.veda            ?? null,
+        temp:    data.temperatura_c   ?? null,
+        dhw:     data.dhw             ?? null,
+      })
+    } catch {
+      setPrediccionViva({ alerta: 'No se pudo obtener predicción en tiempo real.', veda: null })
+    } finally {
+      setLoadingPrediccion(false)
+    }
+  }
   const isDragging  = useRef(false)
   const startX      = useRef(0)
   const startWidth  = useRef(0)
@@ -176,8 +210,8 @@ export default function CoralMap() {
     return()=>{c=true}
   },[])
 
-  function abrirArrecife(z){setZonaActiva(z);setPescaActiva(null);setPanelWidth(window.innerWidth*0.45)}
-  function abrirPesca(z)   {setPescaActiva(z);setZonaActiva(null);setPanelWidth(380)}
+  function abrirArrecife(z){setZonaActiva(z);setPescaActiva(null);setPanelWidth(window.innerWidth*0.45);fetchPrediccionViva(z.id)}
+  function abrirPesca(z)   {setPescaActiva(z);setZonaActiva(null);setPanelWidth(380);fetchPrediccionViva(z.id)}
 
   const panelAbierto = zonaActiva||pescaActiva
   const cfgActiva    = zonaActiva ? CFG[zonaActiva.estado] : null
@@ -392,9 +426,25 @@ export default function CoralMap() {
                     ))}
                   </div>
 
-                  <div style={{fontFamily:MONO,fontSize:9,color:'#334155',lineHeight:1.7,borderTop:B,paddingTop:8}}>
+                  <div style={{fontFamily:MONO,fontSize:9,color:'#334155',lineHeight:1.7,borderTop:B,paddingTop:8,marginBottom:10}}>
                     {zonaActiva.descripcion}
                   </div>
+
+                  {/* Predicción Claude en tiempo real */}
+                  <Label>ALERTA CLAUDE · AHORA</Label>
+                  {loadingPrediccion?(
+                    <div style={{display:'flex',alignItems:'center',gap:8,paddingLeft:10}}>
+                      <span style={{width:5,height:5,background:'#6366f1',animation:'blink 0.8s step-start infinite',display:'inline-block'}}/>
+                      <span style={{fontFamily:MONO,fontSize:9,color:'#6366f1',letterSpacing:'0.15em'}}>GENERANDO CON CLAUDE AI...</span>
+                    </div>
+                  ):prediccionViva?.alerta&&(
+                    <div style={{borderLeft:'2px solid rgba(99,102,241,0.4)',paddingLeft:10,fontFamily:MONO,fontSize:9,color:'#94a3b8',lineHeight:1.8}}>
+                      <div style={{fontFamily:MONO,fontSize:7,color:'#1e3a5f',letterSpacing:'0.2em',marginBottom:5}}>
+                        CLAUDE · {prediccionViva.temp!=null?`${prediccionViva.temp}°C · `:''}DHW {prediccionViva.dhw??'—'}
+                      </div>
+                      {prediccionViva.alerta}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -436,18 +486,31 @@ export default function CoralMap() {
                     <div style={{fontFamily:MONO,fontSize:9,color:'#475569',lineHeight:1.7}}>{pescaActiva.estado?.descripcion}</div>
                   </div>
 
-                  {/* Predicción */}
-                  {pescaActiva.estado?.permitida?(
-                    <>
-                      <Label>PREDICCIÓN CLAUDE · NOAA</Label>
-                      <div style={{borderLeft:'2px solid rgba(6,182,212,0.3)',paddingLeft:12,fontFamily:MONO,fontSize:9,color:'#94a3b8',lineHeight:1.8}}>
-                        {pescaActiva.prediccion}
+                  {/* Predicción Claude en tiempo real */}
+                  <Label>PREDICCIÓN CLAUDE · TIEMPO REAL</Label>
+                  {loadingPrediccion?(
+                    <div style={{borderLeft:'2px solid rgba(99,102,241,0.4)',paddingLeft:12,display:'flex',alignItems:'center',gap:8}}>
+                      <span style={{width:5,height:5,background:'#6366f1',animation:'blink 0.8s step-start infinite',display:'inline-block'}}/>
+                      <span style={{fontFamily:MONO,fontSize:9,color:'#6366f1',letterSpacing:'0.15em'}}>GENERANDO CON CLAUDE AI...</span>
+                    </div>
+                  ):prediccionViva?.alerta?(
+                    <div style={{borderLeft:'2px solid rgba(6,182,212,0.4)',paddingLeft:12,fontFamily:MONO,fontSize:9,color:'#94a3b8',lineHeight:1.8}}>
+                      <div style={{fontFamily:MONO,fontSize:7,color:'#1e3a5f',letterSpacing:'0.2em',marginBottom:6}}>
+                        CLAUDE · {prediccionViva.temp!=null?`${prediccionViva.temp}°C · `:''}DHW {prediccionViva.dhw??'—'} · AHORA
                       </div>
-                    </>
+                      {prediccionViva.alerta}
+                      {prediccionViva.veda?.mensaje&&(
+                        <div style={{marginTop:8,fontFamily:MONO,fontSize:8,color:prediccionViva.veda.color??'#34d399',borderTop:'1px solid rgba(30,41,59,0.9)',paddingTop:6}}>
+                          {prediccionViva.veda.label} — {prediccionViva.veda.mensaje}
+                        </div>
+                      )}
+                    </div>
                   ):(
                     <div style={{borderLeft:`2px solid ${pescaActiva.estado?.color}`,paddingLeft:12,fontFamily:MONO,fontSize:9,color:'#e2e8f0',lineHeight:1.8}}>
-                      <strong style={{color:pescaActiva.estado?.color,display:'block',marginBottom:4,letterSpacing:'0.1em',fontSize:8}}>⛔ ZONA NO DISPONIBLE HOY</strong>
-                      <span style={{color:'#475569'}}>{pescaActiva.estado?.descripcion}</span>
+                      <strong style={{color:pescaActiva.estado?.color,display:'block',marginBottom:4,letterSpacing:'0.1em',fontSize:8}}>
+                        {pescaActiva.estado?.permitida?'PREDICCIÓN':'⛔ ZONA NO DISPONIBLE HOY'}
+                      </strong>
+                      <span style={{color:'#475569'}}>{pescaActiva.prediccion??pescaActiva.estado?.descripcion}</span>
                     </div>
                   )}
 
