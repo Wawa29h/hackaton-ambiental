@@ -14,18 +14,20 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
-    
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://hackaton-ambiental-production.up.railway.app'
+
     fetch(`${apiUrl}/reefs`)
       .then((res) => res.json())
       .then((data) => {
-        // 👇 Aquí ya está inyectada la línea mágica dentro del componente correcto
         console.log("DATOS RECIBIDOS DEL BACKEND:", data)
         setReefs(data)
-        setSelectedReef(data[0]) // Belize por defecto
-        loading: setLoading(false)
+        setSelectedReef(data[0])
+        setLoading(false)
       })
-      .catch((err) => console.error('Error al conectar con el backend:', err))
+      .catch((err) => {
+        console.error('Error al conectar con el backend:', err)
+        setLoading(false)
+      })
   }, [])
 
   if (loading) {
