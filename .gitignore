@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # v0 sandbox internal files
 __v0_runtime_loader.js
 __v0_devtools.tsx
@@ -14,3 +15,12 @@ node_modules
 .next/
 .DS_Store
 .vercel
+=======
+.env
+__pycache__/
+*.pyc
+node_modules/
+dist/
+.venv/
+*.egg-info/
+>>>>>>> 3daf75a77661dab4bc0c0473f077999c89a91b58

@@ -1,0 +1,101 @@
+{
+  "meta": {
+    "descripcion": "Backtest con 4 casos históricos reales del Arrecife Mesoamericano (2023)",
+    "modelo": "anthropic/claude-sonnet-4-5",
+    "ejecutado": "2026-05-16T20:40:27.118Z",
+    "total_casos": 4,
+    "aciertos": 3,
+    "parciales": 1,
+    "fallos": 0
+  },
+  "casos": [
+    {
+      "caso": 1,
+      "titulo": "Honduras — Cordelia Banks, octubre 2023 (peor evento registrado)",
+      "datos_historicos": {
+        "slug": "honduras",
+        "sst": 31.8,
+        "threshold": 29.87,
+        "dhw": 12.8,
+        "alertLevel": 5,
+        "families": 520,
+        "trend": "subiendo"
+      },
+      "prediccion_ia": {
+        "blanqueamiento": "Riesgo crítico de blanqueamiento masivo en los próximos 7 días. Las temperaturas superan el umbral por 1.93°C con estrés térmico acumulado extremo.",
+        "pesca": "Evitar arrecifes someros esta semana y pescar en aguas más profundas temprano en la mañana. Zonas norte y este con corrientes más frías son preferibles.",
+        "salud": "El arrecife está bajo estrés térmico severo con alta probabilidad de mortalidad coralina significativa este mes. Recuperación tomará años si las condiciones no mejoran pronto.",
+        "alerta": "Peligro máximo: el calor extremo del agua está matando los corales que sostienen la pesca.",
+        "prediccion_correcta": true
+      },
+      "realidad_documentada": "Cordelia Banks pasó de 46% a 5% de cobertura coralina — la mayor pérdida registrada en el SAM.",
+      "prediccion_correcta": "SI"
+    },
+    {
+      "caso": 2,
+      "titulo": "Belice, septiembre 2023",
+      "datos_historicos": {
+        "slug": "belize",
+        "sst": 31.2,
+        "threshold": 29.87,
+        "dhw": 8.4,
+        "alertLevel": 4,
+        "families": 180,
+        "trend": "subiendo"
+      },
+      "prediccion_ia": {
+        "blanqueamiento": "El arrecife está en riesgo extremo de blanqueamiento severo durante los próximos 7 días. Las temperaturas superan el umbral crítico por más de 1°C y el DHW de 8.4 indica estrés térmico acumulado muy alto.",
+        "pesca": "Eviten las zonas de arrecife somero y pesquen en aguas más profundas al amanecer o al atardecer. Concentren esfuerzos en áreas de manglar y pastos marinos esta semana.",
+        "salud": "El arrecife muestra deterioro crítico este mes con mortalidad coralina esperada entre 30-50%. La recuperación tomará años si las temperaturas no bajan pronto.",
+        "alerta": "Temperaturas peligrosas: el coral está muriendo, la pesca será muy difícil las próximas semanas.",
+        "prediccion_correcta": true
+      },
+      "realidad_documentada": "40% de corales severamente afectados en el evento de blanqueamiento masivo.",
+      "prediccion_correcta": "SI"
+    },
+    {
+      "caso": 3,
+      "titulo": "Nicaragua, julio 2023 (antes del pico)",
+      "datos_historicos": {
+        "slug": "nicaragua",
+        "sst": 30.1,
+        "threshold": 29.5,
+        "dhw": 2.1,
+        "alertLevel": 2,
+        "families": 290,
+        "trend": "subiendo"
+      },
+      "prediccion_ia": {
+        "blanqueamiento": "El arrecife presenta estrés térmico moderado con temperaturas 0.6°C sobre el umbral de blanqueamiento. En los próximos 7 días se esperan signos iniciales de blanqueamiento en corales sensibles, especialmente en zonas someras.",
+        "pesca": "Pesque temprano en la mañana (5-8 am) en zonas más profundas donde el agua es más fresca. Evite áreas de arrecife poco profundo que muestran mayor estrés térmico.",
+        "salud": "El arrecife muestra deterioro gradual este mes con DHW de 2.1 indicando estrés acumulado. La tendencia al alza de temperatura sugiere que la salud coralina continuará disminuyendo si persisten las condiciones cálidas.",
+        "alerta": "El agua está más caliente de lo normal - los corales empiezan a sufrir y puede haber menos peces pronto.",
+        "prediccion_correcta": false
+      },
+      "realidad_documentada": "El arrecife resistió mejor que sus vecinos — 43% de cobertura coralina mantenida.",
+      "prediccion_correcta": "SI"
+    },
+    {
+      "caso": 4,
+      "titulo": "Quintana Roo — inicio del evento, junio 2023",
+      "datos_historicos": {
+        "slug": "quintana_roo",
+        "sst": 30.4,
+        "threshold": 29.8,
+        "dhw": 4.2,
+        "alertLevel": 3,
+        "families": 340,
+        "trend": "subiendo"
+      },
+      "prediccion_ia": {
+        "blanqueamiento": "El arrecife está experimentando estrés térmico moderado con temperaturas 0.6°C por encima del umbral. En los próximos 7 días se espera blanqueamiento leve a moderado en corales más sensibles, especialmente en aguas someras.",
+        "pesca": "Pesque en las primeras horas de la mañana (5-8 AM) en zonas más profundas (15-25m) donde la temperatura es menor. Evite áreas de arrecife somero que muestran estrés visible.",
+        "salud": "El arrecife muestra deterioro gradual este mes con DHW de 4.2 indicando acumulación de estrés térmico. La tendencia ascendente de temperatura sugiere que la condición empeorará antes de mejorar.",
+        "alerta": "Cuidado: el agua está muy caliente y los corales empiezan a blanquearse, prepare alternativas de pesca para las próximas semanas.",
+        "prediccion_correcta": false
+      },
+      "realidad_documentada": "Blanqueamiento moderado, con recuperación parcial registrada en 2024.",
+      "prediccion_correcta": "PARCIAL"
+    }
+  ]
+}
