@@ -20,13 +20,52 @@ const BG1   = '#030712'
 const BG2   = '#070f1f'
 const B     = '1px solid rgba(30,41,59,0.9)'  // border slim
 
-// ── Datos de arrecifes ───────────────────────────────────────────────────────
-const ZONAS_REALES = [
-  { id: 'los_cobanos',    nombre: 'Los Cóbanos',             pais: 'El Salvador', coords: [13.524,-89.807], cobertura: 4,  ocean:'pacific',   depth:'shallow', especies:['Porites lobata','Pocillopora damicornis','Pavona clavus'],                                                                          estado:'critico',  descripcion:'Único arrecife de El Salvador. Solo 4% de coral vivo.' },
-  { id: 'roatan',         nombre: 'Roatán — Cordelia Banks', pais: 'Honduras',    coords: [16.320,-86.535], cobertura: 18, ocean:'caribbean', depth:'shallow', especies:['Acropora cervicornis','Acropora palmata','Diploria labyrinthiformis','Montastraea cavernosa','Orbicella annularis'],              estado:'riesgo',   descripcion:'Perdió cobertura del 46% al 18% en 2024.' },
-  { id: 'cozumel',        nombre: 'Cozumel',                 pais: 'México',      coords: [20.420,-86.922], cobertura: 22, ocean:'caribbean', depth:'deep',    especies:['Diploria labyrinthiformis','Orbicella annularis','Acropora palmata','Colpophyllia natans','Agaricia tenuifolia'],                estado:'moderado', descripcion:'Arrecife del Caribe mexicano con alta biodiversidad.' },
-  { id: 'cayos_miskitos', nombre: 'Cayos Miskitos',          pais: 'Nicaragua',   coords: [14.380,-82.780], cobertura: 43, ocean:'caribbean', depth:'shallow', especies:['Pseudodiploria strigosa','Montastraea cavernosa','Orbicella faveolata','Agaricia agaricites','Porites astreoides'],              estado:'sano',     descripcion:'El arrecife más saludable de Centroamérica. 43% de cobertura.' },
+// ── Datos base de arrecifes (datos biológicos fijos + fallback) ──────────────
+// Los campos dinámicos (estado, dhw, sst, predicciones) se sobreescriben con la API
+const ZONAS_BASE = [
+  { id: 'los_cobanos',    nombre: 'Los Cóbanos',             pais: 'El Salvador', coords: [13.524,-89.807], cobertura: 4,  ocean:'pacific',   depth:'shallow', especies:['Porites lobata','Pocillopora damicornis','Pavona clavus'],                                                                          estado:'critico',  dhw:0,   sst:null, descripcion:'Único arrecife de El Salvador. Solo 4% de coral vivo.' },
+  { id: 'roatan',         nombre: 'Roatán — Cordelia Banks', pais: 'Honduras',    coords: [16.320,-86.535], cobertura: 18, ocean:'caribbean', depth:'shallow', especies:['Acropora cervicornis','Acropora palmata','Diploria labyrinthiformis','Montastraea cavernosa','Orbicella annularis'],              estado:'riesgo',   dhw:0.8, sst:null, descripcion:'Perdió cobertura del 46% al 18% en 2024.' },
+  { id: 'cozumel',        nombre: 'Cozumel',                 pais: 'México',      coords: [20.420,-86.922], cobertura: 22, ocean:'caribbean', depth:'deep',    especies:['Diploria labyrinthiformis','Orbicella annularis','Acropora palmata','Colpophyllia natans','Agaricia tenuifolia'],                estado:'moderado', dhw:0.9, sst:null, descripcion:'Arrecife del Caribe mexicano con alta biodiversidad.' },
+  { id: 'cayos_miskitos', nombre: 'Cayos Miskitos',          pais: 'Nicaragua',   coords: [14.380,-82.780], cobertura: 43, ocean:'caribbean', depth:'shallow', especies:['Pseudodiploria strigosa','Montastraea cavernosa','Orbicella faveolata','Agaricia agaricites','Porites astreoides'],              estado:'sano',     dhw:0.4, sst:null, descripcion:'El arrecife más saludable de Centroamérica. 43% de cobertura.' },
 ]
+
+// Mapeo: slug de la API (/reefs) → id de zona en ZONAS_BASE
+const SLUG_A_ZONA = {
+  honduras:     'roatan',
+  nicaragua:    'cayos_miskitos',
+  quintana_roo: 'cozumel',
+  belize:       null, // no está en ZONAS_BASE
+}
+
+// Convierte DHW real → estado semáforo
+function dhwAEstado(dhw) {
+  if (dhw > 8) return 'critico'
+  if (dhw > 4) return 'riesgo'
+  if (dhw > 1) return 'moderado'
+  return 'sano'
+}
+
+// Merge datos API sobre la base biológica
+function mergeZonasConApi(apiReefs) {
+  return ZONAS_BASE.map(zona => {
+    const r = apiReefs.find(a => SLUG_A_ZONA[a.slug] === zona.id || a.slug === zona.id)
+    if (!r) return zona
+    const dhw = r.datos?.dhw ?? zona.dhw
+    return {
+      ...zona,
+      dhw,
+      sst:    r.datos?.sst_max ?? zona.sst,
+      viento: r.viento         ?? null,
+      estado: dhwAEstado(dhw),
+      baa:    r.datos?.baa_label ?? null,
+      alerta: r.predictions?.alerta         ?? null,
+      predBlanqueamiento: r.predictions?.blanqueamiento ?? null,
+      predPesca:          r.predictions?.pesca          ?? null,
+      predSalud:          r.predictions?.salud          ?? null,
+      fechaDatos:         r.fecha ?? null,
+    }
+  })
+}
 
 const CFG = {
   sano:     { accent: '#34d399', label: 'SANO'      },
@@ -134,6 +173,7 @@ export default function CoralMap() {
   const [pescaActiva,      setPescaActiva]      = useState(null)
   const [reefGeoJson,      setReefGeoJson]      = useState(null)
   const [zonasPesca,       setZonasPesca]       = useState(ZONAS_PESCA_FALLBACK)
+  const [zonasReales,      setZonasReales]      = useState(ZONAS_BASE)
   const [apiOnline,        setApiOnline]        = useState(false)
   const [tab,              setTab]              = useState('arrecife')
   const [panelWidth,       setPanelWidth]       = useState(380)
@@ -204,8 +244,13 @@ export default function CoralMap() {
     let c=false
     fetch(`${API_URL}/reefs`).then(r=>{if(!r.ok)throw r;return r.json()}).then(data=>{
       if(c)return
+      // Zonas de pesca con datos reales
       const z=data.map(reefApiAZonaPesca).filter(Boolean)
-      if(z.length>0){setZonasPesca(z);setApiOnline(true)}
+      if(z.length>0) setZonasPesca(z)
+      // Zonas de arrecife con estado, DHW, SST y predicciones reales
+      const zr=mergeZonasConApi(data)
+      setZonasReales(zr)
+      setApiOnline(true)
     }).catch(()=>{})
     return()=>{c=true}
   },[])
@@ -243,7 +288,7 @@ export default function CoralMap() {
 
         {/* Lista de zonas */}
         <div style={{flex:1,overflowY:'auto'}}>
-          {tab==='arrecife' && ZONAS_REALES.map(z=>{
+          {tab==='arrecife' && zonasReales.map(z=>{
             const c=CFG[z.estado]
             const activo=zonaActiva?.id===z.id
             return(
@@ -305,7 +350,7 @@ export default function CoralMap() {
             </React.Fragment>
           ))}
 
-          {ZONAS_REALES.map(z=>(
+          {zonasReales.map(z=>(
             <Marker key={z.id} position={z.coords} icon={createGlowIcon(z.estado,zonaActiva?.id===z.id)} eventHandlers={{click:()=>abrirArrecife(z)}}>
               <Popup>
                 <div style={{background:BG1,color:'#e2e8f0',padding:'12px 14px',border:`1px solid ${STATUS_COLORS[z.estado]}33`,borderLeft:`3px solid ${STATUS_COLORS[z.estado]}`,fontFamily:MONO,minWidth:200,borderRadius:0}}>
@@ -402,13 +447,27 @@ export default function CoralMap() {
                     </div>
                   </div>
 
-                  {/* Métricas */}
+                  {/* Métricas — datos reales de NOAA */}
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr',gap:3,marginBottom:14}}>
-                    <MetricBox label="COBERTURA" value={`${zonaActiva.cobertura}%`} color={cfgActiva.accent}/>
-                    <MetricBox label="ALERT LVL"  value="0/3"                        color="#6366f1"/>
-                    <MetricBox label="ESP. CLAVE" value={zonaActiva.especies?.[0]?.split(' ').pop()??'—'} color="#38bdf8"/>
-                    <MetricBox label="SALUD"      value={`${Math.round(zonaActiva.cobertura*2.2)}%`}      color="#34d399"/>
+                    <MetricBox label="COBERTURA" value={`${zonaActiva.cobertura}%`}
+                      color={cfgActiva.accent}/>
+                    <MetricBox label="DHW"
+                      value={zonaActiva.dhw!=null?zonaActiva.dhw.toFixed(1):'—'}
+                      color={zonaActiva.dhw>4?'#ef4444':zonaActiva.dhw>1?'#f59e0b':'#34d399'}/>
+                    <MetricBox label="SST"
+                      value={zonaActiva.sst!=null?`${zonaActiva.sst.toFixed(1)}°`:'—'}
+                      color="#f97316"/>
+                    <MetricBox label="ESP. CLAVE"
+                      value={zonaActiva.especies?.[0]?.split(' ').pop()??'—'}
+                      color="#38bdf8"/>
                   </div>
+                  {/* Viento y fecha si hay datos reales */}
+                  {zonaActiva.viento&&(
+                    <div style={{fontFamily:MONO,fontSize:8,color:'#334155',letterSpacing:'0.15em',marginBottom:10,borderLeft:'2px solid rgba(30,41,59,0.9)',paddingLeft:8}}>
+                      VIENTO {zonaActiva.viento.direccion_cardinal} {zonaActiva.viento.velocidad_kmh} km/h
+                      {zonaActiva.fechaDatos&&<span style={{marginLeft:12,color:'#1e3a5f'}}>NOAA {zonaActiva.fechaDatos}</span>}
+                    </div>
+                  )}
 
                   {/* Especies */}
                   <Label>ESPECIES DOMINANTES</Label>
@@ -430,7 +489,25 @@ export default function CoralMap() {
                     {zonaActiva.descripcion}
                   </div>
 
-                  {/* Predicción Claude en tiempo real */}
+                  {/* Predicciones de noaa.js (Claude AI, actualizadas diariamente) */}
+                  {zonaActiva.predBlanqueamiento&&(
+                    <>
+                      <Label>BLANQUEAMIENTO · PREDICCIÓN</Label>
+                      <div style={{borderLeft:'2px solid rgba(239,68,68,0.4)',paddingLeft:10,fontFamily:MONO,fontSize:9,color:'#fca5a5',lineHeight:1.8,marginBottom:10}}>
+                        {zonaActiva.predBlanqueamiento}
+                      </div>
+                    </>
+                  )}
+                  {zonaActiva.predPesca&&(
+                    <>
+                      <Label>PESCA RESPONSABLE · HOY</Label>
+                      <div style={{borderLeft:'2px solid rgba(52,211,153,0.4)',paddingLeft:10,fontFamily:MONO,fontSize:9,color:'#6ee7b7',lineHeight:1.8,marginBottom:10}}>
+                        {zonaActiva.predPesca}
+                      </div>
+                    </>
+                  )}
+
+                  {/* Alerta Claude en tiempo real (Copernicus + NOAA ahora mismo) */}
                   <Label>ALERTA CLAUDE · AHORA</Label>
                   {loadingPrediccion?(
                     <div style={{display:'flex',alignItems:'center',gap:8,paddingLeft:10}}>
