@@ -575,37 +575,37 @@ export default function CoralMap() {
                 }}
               >✕</button>
 
-              {/* Badge estado — top left flotante */}
-              <div style={{
-                position: 'absolute', top: 12, left: 12, zIndex: 20,
-                display: 'flex', flexDirection: 'column', gap: 6,
-              }}>
-                <div style={{
-                  background: 'rgba(10,15,30,0.75)', backdropFilter: 'blur(10px)',
-                  border: `1px solid ${STATUS_COLORS[zonaActiva.estado]}44`,
-                  borderRadius: 8, padding: '6px 12px',
-                }}>
-                  <div style={{ fontSize: 11, color: '#64748b', marginBottom: 2 }}>{zonaActiva.pais}</div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: '#f1f5f9' }}>{zonaActiva.nombre}</div>
-                </div>
-                <span style={{
-                  fontSize: 11, padding: '3px 10px', borderRadius: 20, fontWeight: 700, alignSelf: 'flex-start',
-                  background: `${STATUS_COLORS[zonaActiva.estado]}22`,
-                  border: `1px solid ${STATUS_COLORS[zonaActiva.estado]}66`,
-                  color: STATUS_COLORS[zonaActiva.estado],
-                  backdropFilter: 'blur(8px)',
-                }}>
-                  {STATUS_LABELS[zonaActiva.estado]} · {zonaActiva.cobertura}% cobertura
-                </span>
-              </div>
-
-              {/* Overlay datos — bottom, glass */}
+              {/* Overlay datos — bottom, glass — incluye nombre y estado */}
               <div style={{
                 position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
-                background: 'linear-gradient(to top, rgba(10,15,30,0.97) 0%, rgba(10,15,30,0.85) 70%, transparent 100%)',
-                backdropFilter: 'blur(12px)',
-                padding: '24px 16px 16px',
+                background: 'linear-gradient(to top, rgba(10,15,30,0.98) 0%, rgba(10,15,30,0.92) 60%, transparent 100%)',
+                backdropFilter: 'blur(14px)',
+                padding: '32px 16px 16px',
               }}>
+                {/* Nombre + estado */}
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 11, color: '#475569', marginBottom: 2 }}>{zonaActiva.pais}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                    <span style={{ fontSize: 22, fontWeight: 700, color: '#f1f5f9' }}>{zonaActiva.nombre}</span>
+                    <span style={{
+                      fontSize: 11, padding: '3px 10px', borderRadius: 20, fontWeight: 700,
+                      background: `${STATUS_COLORS[zonaActiva.estado]}22`,
+                      border: `1px solid ${STATUS_COLORS[zonaActiva.estado]}66`,
+                      color: STATUS_COLORS[zonaActiva.estado],
+                    }}>
+                      {STATUS_LABELS[zonaActiva.estado]}
+                    </span>
+                  </div>
+                  <div style={{
+                    fontSize: 11, color: STATUS_COLORS[zonaActiva.estado],
+                    background: `${STATUS_COLORS[zonaActiva.estado]}15`,
+                    border: `1px solid ${STATUS_COLORS[zonaActiva.estado]}33`,
+                    borderRadius: 20, padding: '2px 10px', display: 'inline-block',
+                  }}>
+                    {STATUS_LABELS[zonaActiva.estado]} · {zonaActiva.cobertura}% cobertura
+                  </div>
+                </div>
+
                 {/* Grid métricas */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8, marginBottom: 12 }}>
                   {[
