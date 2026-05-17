@@ -1,14 +1,14 @@
-"""
+﻿"""
 Endpoints de monitoreo coralino con datos Copernicus + NOAA + Claude.
 
 GET /api/zona/{zona_id}/estado-completo
-    → Temperatura, corrientes, salinidad, DHW, veda dinámica + alerta Claude
+    â†’ Temperatura, corrientes, salinidad, DHW, veda dinÃ¡mica + alerta Claude
 
 GET /api/zona/{zona_id}/forecast
-    → Serie de 14 días: temp, DHW, corrientes, estado de veda por día (para slider)
+    â†’ Serie de 14 dÃ­as: temp, DHW, corrientes, estado de veda por dÃ­a (para slider)
 
 GET /api/zonas
-    → Lista de todas las zonas disponibles con sus coordenadas
+    â†’ Lista de todas las zonas disponibles con sus coordenadas
 """
 
 import os
@@ -17,13 +17,13 @@ import asyncio
 from fastapi import APIRouter, HTTPException
 from pathlib import Path
 
-from services.copernicus import (
+from backend.services.copernicus import (
     get_temperatura,
     get_corrientes,
     get_salinidad,
     get_forecast_14d,
 )
-from services.veda_dinamica import (
+from backend.services.veda_dinamica import (
     calcular_veda,
     analizar_forecast_veda,
     ZONAS,
@@ -31,16 +31,16 @@ from services.veda_dinamica import (
 
 router = APIRouter(prefix="/api", tags=["coral"])
 
-ROOT_DIR    = Path(__file__).resolve().parent.parent
+ROOT_DIR    = Path(__file__).resolve().parents[2]
 REEFS_PATH  = ROOT_DIR / "data" / "reefs.json"
 
-# ─── Helpers ─────────────────────────────────────────────────────────────────
+# â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def _dhw_desde_reefs(zona_id: str) -> float:
     """Lee el DHW del reefs.json generado por noaa.js."""
     # Mapeo de zona_id (frontend) a slug (reefs.json)
     SLUG_MAP = {
-        "los_cobanos":    None,          # no está en reefs.json aún
+        "los_cobanos":    None,          # no estÃ¡ en reefs.json aÃºn
         "roatan":         "honduras",
         "cozumel":        "quintana_roo",
         "cayos_miskitos": "nicaragua",
@@ -60,7 +60,7 @@ def _dhw_desde_reefs(zona_id: str) -> float:
 
 async def _alerta_claude(payload: dict) -> str:
     """
-    Llama a Claude via OpenRouter para traducir los datos a español simple
+    Llama a Claude via OpenRouter para traducir los datos a espaÃ±ol simple
     para el pescador. Usa la misma clave que noaa.js.
     """
     key = os.getenv("OPENROUTER_KEY", "")
@@ -76,13 +76,13 @@ async def _alerta_claude(payload: dict) -> str:
         salinidad  = payload["salinidad"]
 
         prompt = f"""Eres un experto en arrecifes del Arrecife Mesoamericano.
-Genera UNA alerta corta (máximo 3 oraciones) para un pescador artesanal de {zona}.
+Genera UNA alerta corta (mÃ¡ximo 3 oraciones) para un pescador artesanal de {zona}.
 Usa lenguaje simple y directo. Menciona si puede pescar hoy o no.
 
 Datos actuales:
-- Temperatura del mar: {temp}°C
-- DHW (estrés térmico): {dhw}
-- Estado de veda: {veda['label']} — {veda['mensaje']}
+- Temperatura del mar: {temp}Â°C
+- DHW (estrÃ©s tÃ©rmico): {dhw}
+- Estado de veda: {veda['label']} â€” {veda['mensaje']}
 - Salinidad: {salinidad['salinidad_psu']} PSU ({salinidad['interpretacion']})
 
 Responde SOLO la alerta, sin JSON ni formato."""
@@ -108,7 +108,7 @@ def _alerta_fallback(payload: dict) -> str:
     return f"Zona {payload.get('zona', '')}: {veda.get('mensaje', 'Sin datos disponibles.')}"
 
 
-# ─── Endpoints ───────────────────────────────────────────────────────────────
+# â”€â”€â”€ Endpoints â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @router.get("/zonas")
 def get_zonas():
@@ -123,7 +123,7 @@ def get_zonas():
 async def get_estado_completo(zona_id: str):
     """
     Estado completo de una zona: temperatura, corrientes, salinidad,
-    DHW (de reefs.json), veda dinámica y alerta Claude.
+    DHW (de reefs.json), veda dinÃ¡mica y alerta Claude.
     """
     if zona_id not in ZONAS:
         raise HTTPException(
@@ -169,7 +169,7 @@ async def get_estado_completo(zona_id: str):
 @router.get("/zona/{zona_id}/forecast")
 async def get_forecast(zona_id: str):
     """
-    Forecast de 14 días con estado de veda por día.
+    Forecast de 14 dÃ­as con estado de veda por dÃ­a.
     Pensado para el slider del frontend.
 
     Retorna lista de 14 objetos:
@@ -190,6 +190,6 @@ async def get_forecast(zona_id: str):
         "dias":     forecast_con_veda,
         "leyenda": {
             "es_forecast":    "Dato de modelo Copernicus anfc",
-            "es_extrapolado": "Extrapolación lineal días 11-14",
+            "es_extrapolado": "ExtrapolaciÃ³n lineal dÃ­as 11-14",
         },
     }

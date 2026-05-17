@@ -1,26 +1,26 @@
-<<<<<<< HEAD
-# v0 sandbox internal files
+﻿# v0 sandbox internal files
 __v0_runtime_loader.js
 __v0_devtools.tsx
 __v0_jsx-dev-runtime.ts
 .snowflake/
 .v0-trash/
-.vercel/
 
 # Environment variables
+.env
 .env*.local
 
-# Common ignores
-node_modules
+# Dependencies and build outputs
+node_modules/
 .next/
-.DS_Store
-.vercel
-=======
-.env
+dist/
+.vercel/
+.venv/
+venv/
+*.egg-info/
+
+# Python cache
 __pycache__/
 *.pyc
-node_modules/
-dist/
-.venv/
-*.egg-info/
->>>>>>> 3daf75a77661dab4bc0c0473f077999c89a91b58
+
+# OS files
+.DS_Store
