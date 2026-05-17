@@ -6,16 +6,18 @@ export { crearDiploria }      from './Diploria.js'
 // Species mixes keyed by reef characteristics rather than hard-coded IDs.
 // To add a new reef: (1) add its zone id here, (2) add it to ZONAS_REALES in CoralMap.jsx.
 // The 3D scene generates automatically from modelos + dhw.
+// Distribución de especies por arrecife — alineada con scalable-digital-twin CORAL_DISTRIBUTION
+// El orden define la proporción: más repeticiones = más presencia en la escena
 export const ESPECIES_POR_ZONA = {
-  // Pacific: massive dominants
-  los_cobanos:    ['PoritesLobata', 'Pocillopora'],
-  // Caribbean shallow: branching + brain
-  roatan:         ['Acropora', 'Diploria'],
-  // Caribbean deep: brain dominant
-  cozumel:        ['Diploria', 'Acropora'],
-  // Caribbean pristine: mixed massive
-  cayos_miskitos: ['PoritesLobata', 'Diploria'],
-  // Fallbacks by ocean type — used when no zone match
+  // Los Cóbanos, El Salvador — Pacífico: Porites lobata + Pocillopora (arrecife crítico 4%)
+  los_cobanos:    ['PoritesLobata', 'Pocillopora', 'PoritesLobata'],
+  // Roatán — Honduras: Acropora cervicornis + palmata + Diploria (18%)
+  roatan:         ['Acropora', 'Acropora', 'Diploria', 'Acropora'],
+  // Cozumel — México: Diploria + Acropora (profundo, 22%)
+  cozumel:        ['Diploria', 'Acropora', 'Diploria', 'PoritesLobata'],
+  // Cayos Miskitos — Nicaragua: mix masivo saludable (43%)
+  cayos_miskitos: ['Diploria', 'PoritesLobata', 'Acropora', 'Diploria', 'PoritesLobata'],
+  // Fallbacks por tipo de océano
   pacific:        ['PoritesLobata', 'Pocillopora'],
   caribbean:      ['Acropora', 'Diploria'],
   default:        ['PoritesLobata'],

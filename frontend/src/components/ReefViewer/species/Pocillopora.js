@@ -1,8 +1,9 @@
 import * as THREE from 'three'
+import { getHealthColor } from '../utils/healthColors.js'
 
 export function crearPocillopora(x, z, dhw = 0) {
   const group = new THREE.Group()
-  const color = getColorDHW(dhw)
+  const color = getHealthColor(dhw)
 
   // Base central
   const baseGeo = new THREE.CylinderGeometry(0.15, 0.25, 0.3, 7)
@@ -70,9 +71,3 @@ function crearRama(color, nivel, idx, total, padre = null) {
   return mesh
 }
 
-function getColorDHW(dhw) {
-  if (dhw < 4)  return 0x2ecc71
-  if (dhw < 8)  return 0xf39c12
-  if (dhw < 12) return 0xe8e8e8
-  return 0x555555
-}
