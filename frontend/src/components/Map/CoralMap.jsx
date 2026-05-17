@@ -1,6 +1,6 @@
 import React from 'react'
 import { MapContainer, TileLayer, Marker, Popup, GeoJSON, Circle, useMap } from 'react-leaflet'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import ReefViewer from '../ReefViewer/ReefViewer'
 import { ESPECIES_POR_ZONA, especiesDesdeMetadata } from '../ReefViewer/species/index'
 import 'leaflet/dist/leaflet.css'
@@ -249,16 +249,57 @@ const API_URL = import.meta.env.VITE_API_URL ?? 'https://hackaton-ambiental-prod
 
 export default function CoralMap() {
   const [zonaActiva,   setZonaActiva]   = useState(null)
-  const [pescaActiva,  setPescaActiva]  = useState(null)  // zona de pesca seleccionada
+  const [pescaActiva,  setPescaActiva]  = useState(null)
   const [reefGeoJson,  setReefGeoJson]  = useState(null)
   const [zonasPesca,   setZonasPesca]   = useState(ZONAS_PESCA_FALLBACK)
   const [apiOnline,    setApiOnline]    = useState(false)
+  const [panelWidth,   setPanelWidth]   = useState(420)
+  const isDragging   = useRef(false)
+  const startX       = useRef(0)
+  const startWidth   = useRef(0)
+  const containerRef = useRef(null)
 
-  // Al abrir pesca, cerrar arrecife y viceversa
-  function abrirPesca(zona)  { setPescaActiva(zona); setZonaActiva(null)  }
-  function abrirArrecife(z)  { setZonaActiva(z);     setPescaActiva(null) }
+  // Drag-to-resize handlers
+  const onDragStart = useCallback((e) => {
+    isDragging.current = true
+    startX.current     = e.clientX
+    startWidth.current = panelWidth
+    document.body.style.cursor    = 'col-resize'
+    document.body.style.userSelect = 'none'
+  }, [panelWidth])
 
-  // Carga GeoJSON
+  useEffect(() => {
+    const onMove = (e) => {
+      if (!isDragging.current) return
+      const dx        = startX.current - e.clientX          // arrastrar izq = agrandar
+      const newWidth  = Math.min(Math.max(startWidth.current + dx, 320), window.innerWidth * 0.85)
+      setPanelWidth(newWidth)
+    }
+    const onUp = () => {
+      if (!isDragging.current) return
+      isDragging.current             = false
+      document.body.style.cursor    = ''
+      document.body.style.userSelect = ''
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup',   onUp)
+    return () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup',   onUp)
+    }
+  }, [])
+
+  function abrirPesca(zona)  {
+    setPescaActiva(zona)
+    setZonaActiva(null)
+    setPanelWidth(420)
+  }
+  function abrirArrecife(z)  {
+    setZonaActiva(z)
+    setPescaActiva(null)
+    setPanelWidth(window.innerWidth * 0.55)   // abre al 55% de la pantalla
+  }
+
   useEffect(() => {
     let cancelled = false
     fetch('/data/Mesoamerica.geojson')
@@ -268,20 +309,14 @@ export default function CoralMap() {
     return () => { cancelled = true }
   }, [])
 
-  // Carga predicciones reales del backend
   useEffect(() => {
     let cancelled = false
     fetch(`${API_URL}/reefs`)
       .then(res => { if (!res.ok) throw new Error(res.status); return res.json() })
       .then(data => {
         if (cancelled) return
-        const zonas = data
-          .map(reefApiAZonaPesca)
-          .filter(Boolean)
-        if (zonas.length > 0) {
-          setZonasPesca(zonas)
-          setApiOnline(true)
-        }
+        const zonas = data.map(reefApiAZonaPesca).filter(Boolean)
+        if (zonas.length > 0) { setZonasPesca(zonas); setApiOnline(true) }
       })
       .catch(() => console.info('[CoralMap] Backend no disponible, usando datos locales.'))
     return () => { cancelled = true }
@@ -290,10 +325,10 @@ export default function CoralMap() {
   const panelAbierto = zonaActiva || pescaActiva
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'row', height: '100vh', background: '#0a0f1e' }}>
+    <div ref={containerRef} style={{ display: 'flex', flexDirection: 'row', height: '100vh', background: '#0a0f1e', overflow: 'hidden' }}>
 
       {/* ── MAPA ── */}
-      <div style={{ flex: 1, minWidth: 0, position: 'relative', transition: 'flex 0.4s ease' }}>
+      <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
         <MapContainer
           center={[15.5, -85.0]}
           zoom={6}
@@ -473,9 +508,39 @@ export default function CoralMap() {
 
       {/* ── PANEL LATERAL DERECHO ── */}
       {panelAbierto && (
+        <>
+        {/* Handle de resize */}
+        <div
+          onMouseDown={onDragStart}
+          style={{
+            width: 6,
+            flexShrink: 0,
+            cursor: 'col-resize',
+            background: 'transparent',
+            borderLeft: `2px solid ${zonaActiva ? STATUS_COLORS[zonaActiva.estado] + '55' : 'rgba(6,182,212,0.35)'}`,
+            position: 'relative',
+            zIndex: 10,
+            transition: 'border-color 0.2s',
+          }}
+          title="Arrastra para redimensionar"
+        >
+          {/* Grip visual */}
+          <div style={{
+            position: 'absolute', top: '50%', left: '50%',
+            transform: 'translate(-50%,-50%)',
+            display: 'flex', flexDirection: 'column', gap: 3,
+          }}>
+            {[0,1,2,3,4].map(i => (
+              <div key={i} style={{
+                width: 2, height: 2, borderRadius: '50%',
+                background: zonaActiva ? STATUS_COLORS[zonaActiva.estado] + 'aa' : 'rgba(6,182,212,0.6)',
+              }} />
+            ))}
+          </div>
+        </div>
+
         <div style={{
-          width: 400,
-          borderLeft: `2px solid ${zonaActiva ? STATUS_COLORS[zonaActiva.estado] + '44' : 'rgba(6,182,212,0.4)'}`,
+          width: panelWidth,
           display: 'flex', flexDirection: 'column',
           background: '#0a0f1e',
           overflowY: 'auto',
@@ -694,6 +759,7 @@ export default function CoralMap() {
             </>
           )}
         </div>
+        </>
       )}
 
       <style>{`
