@@ -1,4 +1,4 @@
-import json
+﻿import json
 import subprocess
 from datetime import datetime
 from pathlib import Path
@@ -26,9 +26,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Rutas de Copernicus + veda dinámica
+# Rutas de Copernicus + veda dinÃ¡mica
 try:
-    from routes.coral import router as coral_router
+    from backend.routes.coral import router as coral_router
     app.include_router(coral_router)
 except Exception as _e:
     print(f"[main] No se pudo cargar routes/coral.py: {_e}")
