@@ -211,8 +211,21 @@ export default function ReefViewer({ zone, dhw, especies: especiesProp }) {
 }
 
 function generarPosiciones(n) {
-  return Array.from({ length: n }, () => [
-    (Math.random() - 0.5) * 30,
-    (Math.random() - 0.5) * 20,
-  ])
+  // Generamos posiciones fijas basadas en una cuadrícula pseudo-aleatoria matemática (sin Math.random)
+  const posiciones = [];
+  const filas = 4;
+  const columnas = 6;
+  let contador = 0;
+
+  for (let f = 0; f < filas; f++) {
+    for (let c = 0; c < columnas; c++) {
+      if (contador >= n) break;
+      // Espaciado matemático con un ligero desfase fijo para que no se vea una cuadrícula perfecta
+      const x = -13 + c * 5.2 + Math.sin(f * 1.5) * 1.2;
+      const z = -8 + f * 5.0 + Math.cos(c * 2.1) * 1.0;
+      posiciones.push([x, z]);
+      contador++;
+    }
+  }
+  return posiciones;
 }

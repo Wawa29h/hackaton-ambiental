@@ -1,7 +1,7 @@
 {
-<<<<<<< HEAD
   "name": "my-project",
   "version": "0.1.0",
+  "type": "module",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -38,28 +38,33 @@
     "@radix-ui/react-toggle": "1.1.10",
     "@radix-ui/react-toggle-group": "1.1.11",
     "@radix-ui/react-tooltip": "1.2.8",
+    "@types/three": "^0.184.1",
     "@vercel/analytics": "1.6.1",
     "autoprefixer": "^10.4.20",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "1.1.1",
+    "cors": "^2.8.6",
     "date-fns": "4.1.0",
+    "dotenv": "^17.4.2",
     "embla-carousel-react": "8.6.0",
+    "express": "^5.2.1",
     "geojson": "^0.5.0",
     "input-otp": "1.4.2",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.564.0",
-    "next": "16.2.6",
+    "next": "15.1.0",
     "next-themes": "^0.4.6",
-    "react": "^19",
+    "react": "19.0.0",
     "react-day-picker": "9.13.2",
-    "react-dom": "^19",
+    "react-dom": "19.0.0",
     "react-hook-form": "^7.54.1",
     "react-leaflet": "^5.0.0",
     "react-resizable-panels": "^2.1.7",
     "recharts": "2.15.0",
     "sonner": "^1.7.1",
     "tailwind-merge": "^3.3.1",
+    "three": "^0.184.0",
     "vaul": "^1.1.2",
     "zod": "^3.24.1"
   },
@@ -75,12 +80,3 @@
     "typescript": "5.7.3"
   }
 }
-=======
-  "type": "module",
-  "dependencies": {
-    "cors": "^2.8.6",
-    "dotenv": "^17.4.2",
-    "express": "^5.2.1"
-  }
-}
->>>>>>> 3daf75a77661dab4bc0c0473f077999c89a91b58

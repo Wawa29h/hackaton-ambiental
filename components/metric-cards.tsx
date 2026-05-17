@@ -1,6 +1,6 @@
 "use client"
 
-import { Thermometer, Waves, TrendingUp, AlertTriangle } from "lucide-react"
+import { Thermometer, Waves, AlertTriangle, Wind } from "lucide-react"
 
 interface MetricCardProps {
   icon: React.ReactNode
@@ -8,11 +8,10 @@ interface MetricCardProps {
   value: string
   unit: string
   status: "normal" | "warning" | "critical"
-  delta?: string
   description: string
 }
 
-function MetricCard({ icon, label, value, unit, status, delta, description }: MetricCardProps) {
+function MetricCard({ icon, label, value, unit, status, description }: MetricCardProps) {
   const borderGlow = {
     normal: "border-emerald-400/25 shadow-[inset_0_1px_0_rgba(52,211,153,0.1)]",
     warning: "border-amber-400/25 shadow-[inset_0_1px_0_rgba(251,191,36,0.1)]",
@@ -32,12 +31,6 @@ function MetricCard({ icon, label, value, unit, status, delta, description }: Me
           {icon}
           <span className="text-[10px] font-medium uppercase tracking-widest">{label}</span>
         </div>
-        {delta && (
-          <div className="flex items-center gap-1 rounded-full bg-red-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-red-400">
-            <TrendingUp className="h-3 w-3" />
-            {delta}
-          </div>
-        )}
       </div>
       <div className="mt-3 flex items-baseline gap-1.5">
         <span className={`text-3xl font-bold tracking-tight ${valueStyles[status]}`}>{value}</span>
@@ -48,43 +41,54 @@ function MetricCard({ icon, label, value, unit, status, delta, description }: Me
   )
 }
 
-export default function MetricCards() {
+// Recibe los datos dinámicos desde el fetch raíz de Next.js
+interface MetricCardsProps {
+  sst: number
+  dhw: number
+  viento: number
+}
+
+export default function MetricCards({ sst, dhw, viento }: MetricCardsProps) {
+  // Evaluamos dinámicamente el estatus del color según los datos NOAA reales
+  const getSstStatus = (t: number) => (t >= 30 ? "critical" : t >= 28 ? "warning" : "normal")
+  const getDhwStatus = (d: number) => (d >= 8 ? "critical" : d >= 4 ? "warning" : "normal")
+
   return (
     <div className="grid grid-cols-2 gap-3">
       <MetricCard
         icon={<Thermometer className="h-4 w-4 text-red-400/70" />}
         label="SST"
-        value="31.8"
-        unit={"\u00b0C"}
-        status="critical"
-        delta={"+2.3\u00b0C"}
-        description={"Temperatura Superficial del Mar \u2014 promedio regional 7d"}
+        value={sst?.toFixed(1) || "0.0"}
+        unit="°C"
+        status={getSstStatus(sst)}
+        description="Sea Surface Temperature medida en tiempo real por satélite."
       />
+      
       <MetricCard
         icon={<Waves className="h-4 w-4 text-red-400/70" />}
         label="DHW"
-        value="8.2"
+        value={dhw?.toFixed(1) || "0.0"}
         unit="DHW"
-        status="critical"
-        delta="+3.1"
-        description={"Degree Heating Weeks \u2014 acumulaci\u00f3n t\u00e9rmica 12 semanas"}
+        status={getDhwStatus(dhw)}
+        description="Degree Heating Weeks — estrés térmico acumulado."
       />
+      
       <MetricCard
         icon={<AlertTriangle className="h-4 w-4 text-amber-400/70" />}
         label="Alerta NOAA"
-        value="Nivel 2"
+        value={`Nivel ${dhw >= 8 ? 2 : dhw >= 4 ? 1 : 0}`}
         unit=""
-        status="warning"
-        description={"Alerta de blanqueamiento activa para Roat\u00e1n y Cayos Cochinos"}
+        status={dhw >= 4 ? "critical" : "normal"}
+        description="Estado oficial del sistema de alerta de blanqueamiento coralino."
       />
+      
       <MetricCard
-        icon={<Thermometer className="h-4 w-4 text-amber-400/70" />}
-        label={"Anomal\u00eda"}
-        value="+1.8"
-        unit={"\u00b0C"}
-        status="warning"
-        delta="vs. MMM"
-        description={"Desviaci\u00f3n sobre la media mensual m\u00e1xima climatol\u00f3gica"}
+        icon={<Wind className="h-4 w-4 text-emerald-400/70" />}
+        label="Viento"
+        value={viento?.toFixed(1) || "0.0"}
+        unit="km/h"
+        status="normal"
+        description="Velocidad del viento superficial registrada en la estación."
       />
     </div>
   )
