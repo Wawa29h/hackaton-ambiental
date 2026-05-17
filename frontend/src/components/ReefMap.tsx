@@ -13,13 +13,16 @@ const ALERT_LABELS: Record<number, string> = {
   4: 'Crítico',
 }
 
+const _API_BASE = (import.meta as any).env?.VITE_API_URL
+  ?? 'https://hackaton-ambiental-production.up.railway.app'
+
 interface ReefMapProps {
   apiUrl?: string
   height?: number
 }
 
 export default function ReefMap({
-  apiUrl  = 'http://localhost:3001/reefs',
+  apiUrl  = `${_API_BASE}/reefs`,
   height  = 500,
 }: ReefMapProps) {
   const { stations, loading, error } = useReefStations(apiUrl)

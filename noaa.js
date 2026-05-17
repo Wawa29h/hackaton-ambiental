@@ -1,128 +1,198 @@
 import 'dotenv/config';
 import { writeFileSync, mkdirSync } from 'fs';
 
-const SLUGS = ['belize', 'honduras', 'nicaragua', 'quintana_roo'];
+// ─── Fuente de datos ──────────────────────────────────────────────────────────
+// NOAA Coral Reef Watch — ERDDAP directo (sin intermediario, sin clave)
+// Dataset: dhw_5km  |  Variables: CRW_DHW, CRW_SST, CRW_BAA
+const ERDDAP = 'https://pae-paha.pacioos.hawaii.edu/erddap/griddap/dhw_5km.json'
 
-// DHW documentados en mayo 2023 (NOAA CRW) — antes del gran evento de blanqueamiento
+// Zonas del Arrecife Mesoamericano con coordenadas reales
+const ZONAS = [
+  { slug: 'belize',       nombre: 'Belice — Hol Chan',           lat: 17.025, lon: -88.075 },
+  { slug: 'honduras',     nombre: 'Roatán — Cordelia Banks',      lat: 16.320, lon: -86.535 },
+  { slug: 'nicaragua',    nombre: 'Cayos Miskitos',               lat: 14.380, lon: -82.780 },
+  { slug: 'quintana_roo', nombre: 'Banco Chinchorro — Q. Roo',    lat: 18.750, lon: -87.340 },
+]
+
+// DHW de referencia mayo 2023 — antes del gran evento de blanqueamiento
 const DHW_MAYO_2023 = {
   belize:       0.65,
   honduras:     0.83,
   nicaragua:    0.41,
   quintana_roo: 0.92,
-};
+}
 
-// Arrecife icónico y especie emblema por slug
+// Especie emblema por zona
 const REEF_META = {
-  belize:       { arrecife: 'Hol Chan',        especie: 'Tortuga Carey' },
-  honduras:     { arrecife: 'Cordelia Banks',  especie: 'Mero Nassau' },
-  nicaragua:    { arrecife: 'Miskito Cays',    especie: 'Langosta Espinosa' },
-  quintana_roo: { arrecife: 'Banco Chinchorro', especie: 'Pez Loro Gigante' },
-};
+  belize:       { arrecife: 'Hol Chan',         especie: 'Tortuga Carey'      },
+  honduras:     { arrecife: 'Cordelia Banks',   especie: 'Mero Nassau'        },
+  nicaragua:    { arrecife: 'Miskito Cays',     especie: 'Langosta Espinosa'  },
+  quintana_roo: { arrecife: 'Banco Chinchorro', especie: 'Pez Loro Gigante'   },
+}
 
-// Dirección del viento en grados → cardinal
+const BAA_LABELS = {
+  0: 'Sin alerta',
+  1: 'Bleaching Watch',
+  2: 'Bleaching Warning',
+  3: 'Bleaching Alert Level 1',
+  4: 'Bleaching Alert Level 2',
+}
+
 function gradosACardinal(deg) {
-  const dirs = ['N','NE','E','SE','S','SO','O','NO'];
-  return dirs[Math.round(deg / 45) % 8];
+  const dirs = ['N','NE','E','SE','S','SO','O','NO']
+  return dirs[Math.round(deg / 45) % 8]
 }
 
-async function fetchReef(slug) {
-  const res = await fetch(`https://api.coral.tsr.lol/stations/${slug}/current`);
-  return res.json();
+function hoy() {
+  return new Date().toISOString().slice(0, 10)
 }
 
-async function fetchHistory(slug) {
-  const res = await fetch(`https://api.coral.tsr.lol/stations/${slug}?limit=7`);
-  return res.json();
+function haceNDias(n) {
+  const d = new Date()
+  d.setDate(d.getDate() - n)
+  return d.toISOString().slice(0, 10)
 }
 
-async function fetchWind(lat, lon) {
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=wind_speed_10m,wind_direction_10m,wind_gusts_10m&wind_speed_unit=kmh`;
-  const res = await fetch(url);
-  const data = await res.json();
-  const { wind_speed_10m, wind_direction_10m, wind_gusts_10m } = data.current;
+// ─── NOAA ERDDAP — dato actual ────────────────────────────────────────────────
+
+async function fetchNoaaActual(lat, lon) {
+  const fecha = hoy()
+  const t = `(${fecha}T12:00:00Z)`
+  const la = `(${lat})`
+  const lo = `(${lon})`
+  const vars = [
+    `CRW_DHW[${t}][${la}][${lo}]`,
+    `CRW_SST[${t}][${la}][${lo}]`,
+    `CRW_BAA[${t}][${la}][${lo}]`,
+  ].join(',')
+  const url = `${ERDDAP}?${encodeURI(vars)}`
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`NOAA ERDDAP ${res.status}`)
+  const data = await res.json()
+  const row   = data.table.rows[0]
+  const names = data.table.columnNames
+  const d = Object.fromEntries(names.map((n, i) => [n, row[i]]))
   return {
-    velocidad_kmh: wind_speed_10m,
-    direccion_grados: wind_direction_10m,
-    direccion_cardinal: gradosACardinal(wind_direction_10m),
-    rafagas_kmh: wind_gusts_10m,
-    condicion: wind_speed_10m < 15 ? 'calmo' : wind_speed_10m < 30 ? 'moderado' : 'fuerte',
-  };
+    fecha:        d.time?.slice(0, 10) ?? fecha,
+    dhw:          +d.CRW_DHW   || 0,
+    sst_max:      +d.CRW_SST   || 0,
+    sst_min:      +d.CRW_SST   || 0,   // ERDDAP da media diaria; usamos misma para min
+    stress_level: +d.CRW_BAA   || 0,
+    baa_7day_max: +d.CRW_BAA   || 0,
+    baa_label:    BAA_LABELS[+d.CRW_BAA] ?? 'Desconocido',
+    lat:          +d.latitude  || lat,
+    lon:          +d.longitude || lon,
+  }
 }
 
-function calcularTendencia(data) {
-  const dias = [...data].reverse();
-  const n = dias.length;
-  const sstValues = dias.map(d => d.sst_max);
-  const dhwValues = dias.map(d => d.dhw);
-  const sstTotal = sstValues[n - 1] - sstValues[0];
-  const dhwTotal = dhwValues[n - 1] - dhwValues[0];
-  return {
-    sst_pendiente_diaria: +(sstTotal / (n - 1)).toFixed(4),
-    dhw_pendiente_diaria: +(dhwTotal / (n - 1)).toFixed(4),
-    sst_delta_7d: +sstTotal.toFixed(2),
-    dhw_delta_7d: +dhwTotal.toFixed(4),
-    sst_serie: sstValues.map(v => v.toFixed(2)),
-    dhw_serie: dhwValues.map(v => v.toFixed(4)),
-    fechas: dias.map(d => d.date),
-  };
+// ─── NOAA ERDDAP — historial 7 días ──────────────────────────────────────────
+
+async function fetchNoaaHistorial(lat, lon) {
+  const fechaIni = haceNDias(6)
+  const fechaFin = hoy()
+  const r1 = `(${fechaIni}T12:00:00Z)`
+  const r2 = `(${fechaFin}T12:00:00Z)`
+  const rango = `[${r1}:${r2}]`
+  const la = `[(${lat})]`
+  const lo = `[(${lon})]`
+  const vars = [
+    `CRW_DHW${rango}${la}${lo}`,
+    `CRW_SST${rango}${la}${lo}`,
+    `CRW_BAA${rango}${la}${lo}`,
+  ].join(',')
+  const url = `${ERDDAP}?${encodeURI(vars)}`
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`NOAA ERDDAP historial ${res.status}`)
+  const data  = await res.json()
+  const names = data.table.columnNames
+  return data.table.rows.map(row => {
+    const d = Object.fromEntries(names.map((n, i) => [n, row[i]]))
+    return {
+      date: d.time?.slice(0, 10),
+      dhw:  +d.CRW_DHW || 0,
+      sst_max: +d.CRW_SST || 0,
+    }
+  })
 }
+
+// ─── Open-Meteo — viento ──────────────────────────────────────────────────────
+
+async function fetchViento(lat, lon) {
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=wind_speed_10m,wind_direction_10m,wind_gusts_10m&wind_speed_unit=kmh`
+  const res  = await fetch(url)
+  const data = await res.json()
+  const { wind_speed_10m, wind_direction_10m, wind_gusts_10m } = data.current
+  return {
+    velocidad_kmh:       wind_speed_10m,
+    direccion_grados:    wind_direction_10m,
+    direccion_cardinal:  gradosACardinal(wind_direction_10m),
+    rafagas_kmh:         wind_gusts_10m,
+    condicion:           wind_speed_10m < 15 ? 'calmo' : wind_speed_10m < 30 ? 'moderado' : 'fuerte',
+  }
+}
+
+// ─── Tendencia 7 días ─────────────────────────────────────────────────────────
+
+function calcularTendencia(historial) {
+  const n        = historial.length
+  const ssts     = historial.map(d => d.sst_max)
+  const dhws     = historial.map(d => d.dhw)
+  const sstTotal = ssts[n-1] - ssts[0]
+  const dhwTotal = dhws[n-1] - dhws[0]
+  return {
+    sst_pendiente_diaria: +((sstTotal / (n-1)).toFixed(4)),
+    dhw_pendiente_diaria: +((dhwTotal / (n-1)).toFixed(4)),
+    sst_delta_7d:         +(sstTotal.toFixed(2)),
+    dhw_delta_7d:         +(dhwTotal.toFixed(4)),
+    sst_serie:            ssts.map(v => v.toFixed(2)),
+    dhw_serie:            dhws.map(v => v.toFixed(4)),
+    fechas:               historial.map(d => d.date),
+  }
+}
+
+// ─── Claude — predicciones ────────────────────────────────────────────────────
 
 async function generarPredicciones(reef, tendencia, viento) {
-  const { sst_max, sst_min, dhw, stress_level, bleaching_threshold, baa_7day_max } = reef.datos;
-  const sstDir = tendencia.sst_pendiente_diaria > 0 ? 'subiendo' : tendencia.sst_pendiente_diaria < 0 ? 'bajando' : 'estable';
-  const dhwDir = tendencia.dhw_pendiente_diaria > 0 ? 'acumulando' : 'estable o bajando';
+  const { sst_max, sst_min, dhw, stress_level, baa_label, baa_7day_max } = reef.datos
+  const sstDir = tendencia.sst_pendiente_diaria > 0 ? 'subiendo' : tendencia.sst_pendiente_diaria < 0 ? 'bajando' : 'estable'
+  const dhwDir = tendencia.dhw_pendiente_diaria > 0 ? 'acumulando' : 'estable o bajando'
 
-  // Días estimados para cruzar el umbral si la tendencia continúa
-  const margen = bleaching_threshold - sst_max;
-  const diasAlUmbral = tendencia.sst_pendiente_diaria > 0
-    ? Math.ceil(margen / tendencia.sst_pendiente_diaria)
-    : null;
-  const umbralMsg = diasAlUmbral !== null && diasAlUmbral > 0
-    ? `A este ritmo, la SST cruzará el umbral de blanqueamiento en ~${diasAlUmbral} días.`
-    : sst_max >= bleaching_threshold
-    ? 'La SST ya supera el umbral de blanqueamiento.'
-    : 'La SST está bajando — el umbral no está en riesgo inmediato.';
+  const dhw2023   = DHW_MAYO_2023[reef.slug]
+  const dhwDelta  = +(dhw - dhw2023).toFixed(4)
+  const tendenciaInteranual =
+    dhwDelta > 0.5  ? 'significativamente peor que 2023' :
+    dhwDelta > 0    ? 'ligeramente peor que 2023' :
+    dhwDelta < -0.5 ? 'significativamente mejor que 2023' :
+    'similar a 2023'
 
-  const dhw2023 = DHW_MAYO_2023[reef.slug];
-  const dhwDelta = +(dhw - dhw2023).toFixed(4);
-  const tendenciaInteranual = dhwDelta > 0.5 ? 'significativamente peor que 2023'
-    : dhwDelta > 0 ? 'ligeramente peor que 2023'
-    : dhwDelta < -0.5 ? 'significativamente mejor que 2023'
-    : 'similar a 2023';
-
-  const { arrecife, especie } = REEF_META[reef.slug];
+  const { arrecife, especie } = REEF_META[reef.slug]
 
   const prompt = `Eres un experto en salud de arrecifes coralinos del Arrecife Mesoamericano.
 Genera predicciones MUY ESPECÍFICAS para el arrecife de ${reef.nombre} (zona: ${arrecife}):
 
-Datos actuales (${reef.fecha}):
-- SST máxima: ${sst_max}°C | SST mínima: ${sst_min}°C
-- Umbral de blanqueamiento: ${bleaching_threshold}°C (diferencia actual: ${(sst_max - bleaching_threshold).toFixed(2)}°C)
-- ${umbralMsg}
-- Degree Heating Weeks (DHW): ${dhw}
-- Nivel de estrés térmico: ${stress_level}/4
-- Alerta BAA 7 días: ${baa_7day_max}
+Datos actuales (${reef.fecha}) — fuente: NOAA Coral Reef Watch ERDDAP directo:
+- SST: ${sst_max}°C
+- DHW: ${dhw} (${dhwDir})
+- Nivel de alerta NOAA: ${baa_label} (BAA=${baa_7day_max})
+- Estrés térmico nivel: ${stress_level}/4
 
 Viento actual:
-- Velocidad: ${viento.velocidad_kmh} km/h (${viento.condicion}) | Ráfagas: ${viento.rafagas_kmh} km/h
-- Dirección: ${viento.direccion_cardinal} (${viento.direccion_grados}°)
-- Impacto en pesca: viento ${viento.direccion_cardinal} a ${viento.velocidad_kmh} km/h ${viento.condicion === 'fuerte' ? 'dificulta la navegación — evitar mar abierto' : viento.condicion === 'moderado' ? 'permite navegación con precaución' : 'condiciones favorables para salir'}
+- ${viento.velocidad_kmh} km/h ${viento.direccion_cardinal} (${viento.condicion}) | Ráfagas: ${viento.rafagas_kmh} km/h
 
 Contexto interanual:
-- En mayo 2023 este arrecife tenía DHW de ${dhw2023} — hoy tiene ${dhw}. La tendencia interanual es ${tendenciaInteranual}.
-- El peor momento registrado fue octubre 2023 con DHW 12.8 y pérdida del 40–90% de cobertura coralina.
+- DHW mayo 2023: ${dhw2023} → hoy: ${dhw} (${tendenciaInteranual})
 
-Tendencia últimos 7 días (del ${tendencia.fechas[0]} al ${tendencia.fechas[tendencia.fechas.length - 1]}):
+Tendencia 7 días (${tendencia.fechas[0]} → ${tendencia.fechas[tendencia.fechas.length-1]}):
 - SST: ${tendencia.sst_serie.join(' → ')}°C (${sstDir}, ${tendencia.sst_pendiente_diaria > 0 ? '+' : ''}${tendencia.sst_pendiente_diaria}°C/día)
-- DHW: ${tendencia.dhw_serie.join(' → ')} (${dhwDir})
+- DHW: ${tendencia.dhw_serie.join(' → ')}
 
-Responde ÚNICAMENTE con JSON válido, sin texto adicional:
+Responde ÚNICAMENTE con JSON válido:
 {
-  "blanqueamiento": "Menciona exactamente cuántos días faltan para cruzar el umbral si la tendencia continúa. Sé específico con el número.",
-  "pesca": "Menciona hora exacta de salida, profundidad específica en metros, dirección según el viento ${viento.direccion_cardinal} a ${viento.velocidad_kmh} km/h, y especie más probable de encontrar (${especie} u otras).",
-  "salud": "Compara el estado actual con el peor momento histórico (oct 2023, DHW 12.8). ¿Qué tan lejos o cerca estamos de ese escenario?",
-  "alerta": "Dirige el mensaje a 'Hermano pescador de ${reef.nombre}'. Menciona el arrecife ${arrecife} por nombre y la ${especie} como especie en riesgo. Máximo 2 oraciones directas."
-}`;
+  "blanqueamiento": "días o semanas concretas hasta cruzar umbral, según tendencia",
+  "pesca": "hora exacta de salida, profundidad específica, dirección según viento ${viento.direccion_cardinal} a ${viento.velocidad_kmh} km/h, especie más probable (${especie})",
+  "salud": "comparación con oct 2023 (DHW 12.8, pérdida 40-90%). ¿Qué tan lejos estamos?",
+  "alerta": "Hermano pescador de ${reef.nombre}: menciona ${arrecife} y ${especie}. Máx 2 oraciones directas."
+}`
 
   const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
@@ -135,64 +205,77 @@ Responde ÚNICAMENTE con JSON válido, sin texto adicional:
       stream: false,
       messages: [{ role: 'user', content: prompt }],
     }),
-  });
-
-  const data = await res.json();
-  const content = data.choices?.[0]?.message?.content ?? '{}';
-  const match = content.match(/\{[\s\S]*\}/);
-  return match ? JSON.parse(match[0]) : { error: content };
+  })
+  const data    = await res.json()
+  const content = data.choices?.[0]?.message?.content ?? '{}'
+  const match   = content.match(/\{[\s\S]*\}/)
+  return match ? JSON.parse(match[0]) : { error: content }
 }
 
+// ─── Pipeline principal ───────────────────────────────────────────────────────
+
 export async function refreshReefs(dataPath = './data/reefs.json') {
-  console.log(`[${new Date().toISOString()}] Actualizando reefs.json...`);
-  const resultados = [];
+  console.log(`[${new Date().toISOString()}] Actualizando reefs.json desde NOAA ERDDAP...`)
+  const resultados = []
 
-  for (const slug of SLUGS) {
-    console.log(`  Fetching ${slug}...`);
-    const [raw, hist] = await Promise.all([fetchReef(slug), fetchHistory(slug)]);
-    const tendencia = calcularTendencia(hist.data);
-    const viento = await fetchWind(raw.latitude, raw.longitude);
+  for (const zona of ZONAS) {
+    const { slug, nombre, lat, lon } = zona
+    console.log(`  → ${nombre} (${lat}, ${lon})`)
 
-    console.log(`    SST ${tendencia.sst_pendiente_diaria > 0 ? '+' : ''}${tendencia.sst_pendiente_diaria}°C/día | Viento ${viento.velocidad_kmh}km/h ${viento.direccion_cardinal} (${viento.condicion})`);
+    try {
+      const [actual, historial, viento] = await Promise.all([
+        fetchNoaaActual(lat, lon),
+        fetchNoaaHistorial(lat, lon),
+        fetchViento(lat, lon),
+      ])
 
-    const reef = {
-      slug,
-      nombre: raw.name,
-      region: raw.region,
-      fecha: raw.current.date,
-      coordenadas: { lat: raw.latitude, lon: raw.longitude },
-      datos: {
-        sst_max: raw.current.sst_max,
-        sst_min: raw.current.sst_min,
-        dhw: raw.current.dhw,
-        stress_level: raw.current.stress_level,
-        bleaching_threshold: raw.bleaching_threshold,
-        baa_7day_max: raw.current.baa_7day_max,
-      },
-      viento,
-      tendencia,
-      interanual: {
-        dhw_mayo_2023: DHW_MAYO_2023[slug],
-        dhw_actual: raw.current.dhw,
-        delta: +(raw.current.dhw - DHW_MAYO_2023[slug]).toFixed(4),
-      },
-    };
+      const tendencia = calcularTendencia(historial)
 
-    reef.predictions = await generarPredicciones(reef, tendencia, viento);
-    console.log(`  ✓ ${reef.nombre}`);
-    console.log(`    blanqueamiento : ${reef.predictions.blanqueamiento}`);
-    console.log(`    pesca          : ${reef.predictions.pesca}`);
-    console.log(`    alerta         : ${reef.predictions.alerta}`);
-    resultados.push(reef);
+      console.log(`    SST=${actual.sst_max}°C  DHW=${actual.dhw}  BAA=${actual.stress_level} (${actual.baa_label})`)
+      console.log(`    Viento: ${viento.velocidad_kmh}km/h ${viento.direccion_cardinal} (${viento.condicion})`)
+      console.log(`    Tendencia SST: ${tendencia.sst_pendiente_diaria > 0 ? '+' : ''}${tendencia.sst_pendiente_diaria}°C/día`)
+
+      const reef = {
+        slug,
+        nombre,
+        region:       'Arrecife Mesoamericano',
+        fecha:        actual.fecha,
+        coordenadas:  { lat, lon },
+        datos: {
+          sst_max:            actual.sst_max,
+          sst_min:            actual.sst_min,
+          dhw:                actual.dhw,
+          stress_level:       actual.stress_level,
+          baa_7day_max:       actual.baa_7day_max,
+          baa_label:          actual.baa_label,
+          bleaching_threshold: +(actual.sst_max - actual.dhw * 0.1).toFixed(2), // estimado
+        },
+        viento,
+        tendencia,
+        interanual: {
+          dhw_mayo_2023: DHW_MAYO_2023[slug],
+          dhw_actual:    actual.dhw,
+          delta:         +(actual.dhw - DHW_MAYO_2023[slug]).toFixed(4),
+        },
+        fuente: 'NOAA Coral Reef Watch ERDDAP — pae-paha.pacioos.hawaii.edu',
+      }
+
+      reef.predictions = await generarPredicciones(reef, tendencia, viento)
+      console.log(`    ✓ ${nombre}`)
+      resultados.push(reef)
+
+    } catch (err) {
+      console.error(`    ✗ Error en ${nombre}: ${err.message}`)
+    }
   }
 
-  mkdirSync('./data', { recursive: true });
-  writeFileSync(dataPath, JSON.stringify(resultados, null, 2));
-  console.log(`\n[${new Date().toISOString()}] ✓ reefs.json actualizado (${resultados.length} arrecifes)\n`);
-  return resultados;
+  mkdirSync('./data', { recursive: true })
+  writeFileSync(dataPath, JSON.stringify(resultados, null, 2))
+  console.log(`\n[${new Date().toISOString()}] ✓ reefs.json actualizado (${resultados.length} zonas)\n`)
+  return resultados
 }
 
 // Ejecución directa: node noaa.js
 if (process.argv[1].endsWith('noaa.js')) {
-  refreshReefs();
+  refreshReefs()
 }

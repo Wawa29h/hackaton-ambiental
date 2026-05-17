@@ -24,7 +24,10 @@ export function alertColor(level: number): string {
   return ALERT_COLORS[level] ?? '#cccccc'
 }
 
-export function useReefStations(apiUrl = 'http://localhost:3001/reefs') {
+const _API_BASE = (import.meta as any).env?.VITE_API_URL
+  ?? 'https://hackaton-ambiental-production.up.railway.app'
+
+export function useReefStations(apiUrl = `${_API_BASE}/reefs`) {
   const [stations, setStations] = useState<ReefStation[]>([])
   const [loading,  setLoading]  = useState(true)
   const [error,    setError]    = useState<string | null>(null)

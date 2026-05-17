@@ -1,4 +1,5 @@
-import { MapContainer, TileLayer, Marker, Popup, GeoJSON, useMap } from 'react-leaflet'
+import React from 'react'
+import { MapContainer, TileLayer, Marker, Popup, GeoJSON, Circle, useMap } from 'react-leaflet'
 import { useState, useEffect } from 'react'
 import ReefViewer from '../ReefViewer/ReefViewer'
 import { ESPECIES_POR_ZONA, especiesDesdeMetadata } from '../ReefViewer/species/index'
@@ -70,6 +71,135 @@ const ZONAS_REALES = [
   }
 ]
 
+// ─── Lógica de zona de pesca responsable ────────────────────────────────────
+
+// Paso 1: determina el semáforo según DHW
+function getEstadoZona(dhw) {
+  if (dhw > 8) return { color: '#ef4444', label: 'VEDA',      permitida: false, maxLanchas: 0,  descripcion: 'Coral en blanqueamiento severo — zona cerrada para recuperación.' }
+  if (dhw > 4) return { color: '#f97316', label: 'LIMITADA',  permitida: true,  maxLanchas: 3,  descripcion: 'Coral bajo estrés. Solo pesca de altura, sin buceo ni ancla en coral.' }
+  if (dhw > 1) return { color: '#fbbf24', label: 'MODERADA',  permitida: true,  maxLanchas: 6,  descripcion: 'Estrés térmico leve. Pesca moderada permitida, evitar zonas someras.' }
+  return         { color: '#34d399', label: 'PERMITIDA', permitida: true,  maxLanchas: 10, descripcion: 'Coral sano. Pesca responsable permitida — ancla solo en arena.' }
+}
+
+// Paso 2: calcula coordenadas del sotavento desde el arrecife y el viento
+// windDirGrados = de dónde viene el viento (86° = del Este)
+// distKm = qué tan lejos del arrecife colocar la zona segura
+function calcularSotavento(lat, lon, windDirGrados, distKm = 9) {
+  // Sotavento = dirección OPUESTA al viento
+  const sotaventoDirRad = ((windDirGrados + 180) % 360) * (Math.PI / 180)
+  const gradosPorKm = 1 / 111
+  return [
+    lat + Math.cos(sotaventoDirRad) * distKm * gradosPorKm,
+    lon + Math.sin(sotaventoDirRad) * distKm * gradosPorKm,
+  ]
+}
+
+// Paso 3: radio de la zona según condición del viento
+function calcularRadio(velocidadKmh, dhw) {
+  const base = velocidadKmh < 15 ? 10000 : velocidadKmh < 30 ? 7000 : 5000
+  // Si hay estrés térmico, reducir el radio (menos área explotable)
+  return dhw > 4 ? base * 0.6 : base
+}
+
+// Paso 4: rotación para no repetir la misma zona dos días seguidos
+// Usa el día del año para rotar entre zonas disponibles
+function debeRotar(slug) {
+  const dia = Math.floor(Date.now() / 86400000) // días desde epoch
+  const slugs = ['honduras', 'nicaragua', 'quintana_roo', 'belize']
+  const turnoHoy = dia % slugs.length
+  // La zona descansa si le tocó ayer
+  return slugs[(turnoHoy - 1 + slugs.length) % slugs.length] === slug
+}
+
+// Metadatos fijos por slug — solo nombre e id, coords se calculan del viento
+const PESCA_META = {
+  honduras:     { id: 'pesca_roatan',    nombre: 'Cordelia Banks' },
+  nicaragua:    { id: 'pesca_nicaragua', nombre: 'Miskito Cays'   },
+  quintana_roo: { id: 'pesca_cozumel',  nombre: 'Banco Chinchorro'},
+  belize:       { id: 'pesca_belize',   nombre: 'Hol Chan'        },
+}
+
+// Fallback estático con DHW reales del último noaa.js
+const ZONAS_PESCA_FALLBACK = [
+  { id: 'pesca_roatan',    nombre: 'Cordelia Banks', coords: [16.318, -86.620], radio: 6000, sst: '30.3°C', dhw: 0.83, viento: 'E 37 km/h', enDescanso: false,
+    prediccion: 'Salida 5:00–6:00 AM. Lado oeste de Cordelia Banks, 15–25 m, usando el arrecife como barrera contra viento E. Retornar antes de 2:00 PM.',
+    alerta: 'Cordelia Banks superó umbral de blanqueamiento. Protege zonas de reproducción.' },
+  { id: 'pesca_nicaragua', nombre: 'Miskito Cays',   coords: [14.375, -82.830], radio: 7000, sst: '29.9°C', dhw: 2.15, viento: 'E 35.5 km/h', enDescanso: false,
+    prediccion: 'Salida 4:30–5:00 AM. Zonas protegidas al OESTE de los cayos, 8–15 m. Langosta Espinosa en arrecifes someros del lado occidental.',
+    alerta: 'DHW 2.15 — estrés térmico nivel 2. Riesgo de blanqueamiento en aumento.' },
+  { id: 'pesca_cozumel',   nombre: 'Banco Chinchorro',coords: [18.760, -87.380], radio: 8000, sst: '30.2°C', dhw: 0.92, viento: 'E 22.9 km/h', enDescanso: false,
+    prediccion: 'Salida 5:30–6:00 AM desde Mahahual. Cara oeste del atolón, 8–15 m. Pez Loro Gigante en arrecifes someros.',
+    alerta: 'Agua rebasa 30°C y sigue subiendo. Reporta colonias pálidas al CONANP.' },
+  { id: 'pesca_belize',    nombre: 'Hol Chan',        coords: [17.728, -87.570], radio: 5000, sst: '30.9°C', dhw: 0.33, viento: 'E 27.3 km/h', enDescanso: false,
+    prediccion: 'Salida 5:30–6:00 AM. Oeste de Hol Chan (sotavento), 8–12 m en pastos marinos.',
+    alerta: 'Hol Chan en estrés térmico con DHW subiendo. Evita anclar en coral vivo.' },
+]
+
+// Convierte un reef del API aplicando los 4 pasos
+function reefApiAZonaPesca(reef) {
+  const meta = PESCA_META[reef.slug]
+  if (!meta) return null
+  const v   = reef.viento ?? {}
+  const d   = reef.datos  ?? {}
+  const dhw = d.dhw ?? 0
+  const lat = reef.coordenadas?.lat ?? 0
+  const lon = reef.coordenadas?.lon ?? 0
+
+  // Paso 2: coords calculadas desde el viento real
+  const coords = v.direccion_grados != null
+    ? calcularSotavento(lat, lon, v.direccion_grados)
+    : [lat, lon - 0.08]  // fallback: mover al oeste
+
+  // Paso 3: radio según viento y DHW
+  const radio = calcularRadio(v.velocidad_kmh ?? 20, dhw)
+
+  // Paso 4: rotación
+  const enDescanso = debeRotar(reef.slug)
+
+  const estado = enDescanso
+    ? { color: '#6366f1', label: 'DESCANSO', permitida: false, maxLanchas: 0, descripcion: 'Esta zona descansa hoy para permitir recuperación del arrecife. Prueba otra zona.' }
+    : getEstadoZona(dhw)
+
+  return {
+    id:         meta.id,
+    nombre:     meta.nombre,
+    coords,
+    radio,
+    enDescanso,
+    estado,                                           // semáforo completo
+    sst:        d.sst_max != null ? `${d.sst_max}°C` : '—',
+    dhw,
+    cobertura:  reef.cobertura ?? null,
+    viento:     v.velocidad_kmh != null
+      ? `${v.direccion_cardinal ?? ''} ${v.velocidad_kmh} km/h — ${v.condicion ?? ''}`
+      : '—',
+    sotaventoDe: v.direccion_cardinal ?? '?',        // de dónde viene el viento
+    prediccion:  reef.predictions?.pesca  ?? 'Sin predicción disponible.',
+    alerta:      reef.predictions?.alerta ?? '',
+    blanqueamiento: reef.predictions?.blanqueamiento ?? '',
+    fecha:       reef.fecha ?? '',
+  }
+}
+
+function createFishIcon(activo = false) {
+  const size = activo ? 38 : 32
+  return L.divIcon({
+    className: '',
+    iconSize:    [size, size],
+    iconAnchor:  [size / 2, size / 2],
+    html: `
+      <div style="
+        width:${size}px;height:${size}px;border-radius:50%;
+        background:${activo ? 'rgba(6,182,212,0.3)' : 'rgba(6,182,212,0.15)'};
+        border:2px solid ${activo ? 'rgba(6,182,212,1)' : 'rgba(6,182,212,0.6)'};
+        display:flex;align-items:center;justify-content:center;
+        font-size:${activo ? 20 : 16}px;
+        box-shadow:0 0 ${activo ? 20 : 12}px rgba(6,182,212,${activo ? 0.8 : 0.4});
+      ">🎣</div>
+    `,
+  })
+}
+
 const STATUS_COLORS = {
   sano:     '#34d399',
   moderado: '#fbbf24',
@@ -115,10 +245,20 @@ function MapReady() {
   return null
 }
 
-export default function CoralMap() {
-  const [zonaActiva, setZonaActiva]   = useState(null)
-  const [reefGeoJson, setReefGeoJson] = useState(null)
+const API_URL = import.meta.env.VITE_API_URL ?? 'https://hackaton-ambiental-production.up.railway.app'
 
+export default function CoralMap() {
+  const [zonaActiva,   setZonaActiva]   = useState(null)
+  const [pescaActiva,  setPescaActiva]  = useState(null)  // zona de pesca seleccionada
+  const [reefGeoJson,  setReefGeoJson]  = useState(null)
+  const [zonasPesca,   setZonasPesca]   = useState(ZONAS_PESCA_FALLBACK)
+  const [apiOnline,    setApiOnline]    = useState(false)
+
+  // Al abrir pesca, cerrar arrecife y viceversa
+  function abrirPesca(zona)  { setPescaActiva(zona); setZonaActiva(null)  }
+  function abrirArrecife(z)  { setZonaActiva(z);     setPescaActiva(null) }
+
+  // Carga GeoJSON
   useEffect(() => {
     let cancelled = false
     fetch('/data/Mesoamerica.geojson')
@@ -128,11 +268,30 @@ export default function CoralMap() {
     return () => { cancelled = true }
   }, [])
 
+  // Carga predicciones reales del backend
+  useEffect(() => {
+    let cancelled = false
+    fetch(`${API_URL}/reefs`)
+      .then(res => { if (!res.ok) throw new Error(res.status); return res.json() })
+      .then(data => {
+        if (cancelled) return
+        const zonas = data
+          .map(reefApiAZonaPesca)
+          .filter(Boolean)
+        if (zonas.length > 0) {
+          setZonasPesca(zonas)
+          setApiOnline(true)
+        }
+      })
+      .catch(() => console.info('[CoralMap] Backend no disponible, usando datos locales.'))
+    return () => { cancelled = true }
+  }, [])
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0a0f1e' }}>
 
       {/* ── MAPA ── */}
-      <div style={{ height: zonaActiva ? '45%' : '100%', transition: 'height 0.4s ease', position: 'relative' }}>
+      <div style={{ height: zonaActiva ? '45%' : pescaActiva ? '58%' : '100%', transition: 'height 0.4s ease', position: 'relative' }}>
         <MapContainer
           center={[15.5, -85.0]}
           zoom={6}
@@ -162,13 +321,37 @@ export default function CoralMap() {
             />
           )}
 
+          {/* ── Zonas de pesca ── */}
+          {zonasPesca.map(zona => (
+            <React.Fragment key={zona.id}>
+              {/* Círculo — color según semáforo DHW */}
+              <Circle
+                center={zona.coords}
+                radius={zona.radio}
+                pathOptions={{
+                  color:       zona.estado?.color ?? '#06b6d4',
+                  fillColor:   zona.estado?.color ?? '#06b6d4',
+                  fillOpacity: zona.estado?.permitida ? 0.08 : 0.18,
+                  weight:      zona.estado?.permitida ? 1.5 : 2.5,
+                  dashArray:   zona.estado?.permitida ? '6 4' : '2 4',
+                }}
+              />
+              {/* Marcador 🎣 — abre panel inferior */}
+              <Marker
+                position={zona.coords}
+                icon={createFishIcon(pescaActiva?.id === zona.id)}
+                eventHandlers={{ click: () => abrirPesca(zona) }}
+              />
+            </React.Fragment>
+          ))}
+
           {/* Marcadores con brillo */}
           {ZONAS_REALES.map(zona => (
             <Marker
               key={zona.id}
               position={zona.coords}
               icon={createGlowIcon(zona.estado, zonaActiva?.id === zona.id)}
-              eventHandlers={{ click: () => setZonaActiva(zona) }}
+              eventHandlers={{ click: () => abrirArrecife(zona) }}
             >
               <Popup>
                 <div style={{
@@ -220,22 +403,24 @@ export default function CoralMap() {
           ))}
         </MapContainer>
 
-        {/* Indicador LIVE */}
+        {/* Indicador LIVE / LOCAL */}
         <div style={{
           position: 'absolute', top: 16, left: 16, zIndex: 1000,
           display: 'flex', alignItems: 'center', gap: 8,
           background: 'rgba(10,15,30,0.85)', backdropFilter: 'blur(8px)',
-          border: '1px solid rgba(52,211,153,0.2)',
+          border: `1px solid ${apiOnline ? 'rgba(52,211,153,0.2)' : 'rgba(251,191,36,0.2)'}`,
           borderRadius: 6, padding: '6px 12px',
-          fontSize: 11, fontFamily: 'monospace', color: 'rgba(52,211,153,0.85)',
+          fontSize: 11, fontFamily: 'monospace',
+          color: apiOnline ? 'rgba(52,211,153,0.85)' : 'rgba(251,191,36,0.85)',
         }}>
           <span style={{
             width: 8, height: 8, borderRadius: '50%',
-            background: '#34d399', display: 'inline-block',
+            background: apiOnline ? '#34d399' : '#fbbf24',
+            display: 'inline-block',
             animation: 'pulse 2s infinite',
-            boxShadow: '0 0 6px #34d399',
+            boxShadow: `0 0 6px ${apiOnline ? '#34d399' : '#fbbf24'}`,
           }} />
-          LIVE — Arrecife Mesoamericano
+          {apiOnline ? 'LIVE — Predicciones NOAA/Claude' : 'LOCAL — Datos del último reporte'}
         </div>
 
         {/* Coordenadas */}
@@ -270,8 +455,175 @@ export default function CoralMap() {
               {label}
             </div>
           ))}
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: 6, paddingTop: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: '#94a3b8' }}>
+              <span style={{
+                width: 10, height: 10, borderRadius: '50%',
+                background: 'transparent',
+                border: '2px dashed #06b6d4',
+                display: 'inline-block', flexShrink: 0,
+              }} />
+              Zona de Pesca
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* ── PANEL DE PESCA ── */}
+      {pescaActiva && (
+        <div style={{
+          height: '42%',
+          borderTop: '2px solid rgba(6,182,212,0.4)',
+          display: 'flex', flexDirection: 'column',
+          background: '#0a0f1e',
+        }}>
+          {/* Header con semáforo */}
+          <div style={{
+            padding: '10px 16px',
+            background: `${pescaActiva.estado?.color ?? '#06b6d4'}0d`,
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            borderBottom: `1px solid ${pescaActiva.estado?.color ?? '#06b6d4'}22`,
+            flexShrink: 0,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontWeight: 700, color: '#f1f5f9', fontSize: 15 }}>
+                🎣 Pesca Responsable — {pescaActiva.nombre}
+              </span>
+              {/* Badge semáforo */}
+              <span style={{
+                fontSize: 11, padding: '2px 10px', borderRadius: 20, fontWeight: 700,
+                background: `${pescaActiva.estado?.color}22`,
+                border: `1px solid ${pescaActiva.estado?.color}66`,
+                color: pescaActiva.estado?.color,
+              }}>
+                {pescaActiva.estado?.label}
+              </span>
+              {pescaActiva.fecha && (
+                <span style={{ fontSize: 10, color: '#475569' }}>· {pescaActiva.fecha}</span>
+              )}
+            </div>
+            <button onClick={() => setPescaActiva(null)} style={{
+              background: 'transparent', border: '1px solid rgba(255,255,255,0.1)',
+              color: '#64748b', borderRadius: 4, padding: '3px 10px', cursor: 'pointer', fontSize: 12,
+            }}>✕ cerrar</button>
+          </div>
+
+          {/* Contenido */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', gap: 14 }}>
+
+            {/* Columna izquierda */}
+            <div style={{ minWidth: 190, display: 'flex', flexDirection: 'column', gap: 6 }}>
+
+              {/* Estado de la zona */}
+              <div style={{
+                background: `${pescaActiva.estado?.color}0f`,
+                border: `1px solid ${pescaActiva.estado?.color}33`,
+                borderRadius: 8, padding: '8px 12px',
+              }}>
+                <div style={{ fontSize: 10, color: '#475569', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 }}>Estado del arrecife</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: pescaActiva.estado?.color, marginBottom: 4 }}>
+                  {pescaActiva.estado?.label}
+                  {pescaActiva.estado?.maxLanchas > 0 && (
+                    <span style={{ fontSize: 10, fontWeight: 400, color: '#94a3b8', marginLeft: 8 }}>
+                      máx {pescaActiva.estado.maxLanchas} lanchas
+                    </span>
+                  )}
+                </div>
+                <div style={{ fontSize: 10, color: '#94a3b8', lineHeight: 1.4 }}>
+                  {pescaActiva.estado?.descripcion}
+                </div>
+              </div>
+
+              {/* Métricas */}
+              {[
+                { icon: '🌡️', label: 'Temp. del mar', value: pescaActiva.sst,  color: '#f97316' },
+                { icon: '🔥', label: 'DHW (estrés)',   value: `${pescaActiva.dhw} semanas·grado`, color: pescaActiva.estado?.color },
+                { icon: '💨', label: 'Viento hoy',     value: pescaActiva.viento, color: '#94a3b8' },
+                { icon: '🧭', label: 'Zona segura',    value: `Sotavento del ${pescaActiva.sotaventoDe ?? 'E'} — aguas protegidas`, color: '#67e8f9' },
+              ].map(({ icon, label, value, color }) => (
+                <div key={label} style={{
+                  background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)',
+                  borderRadius: 8, padding: '7px 10px',
+                }}>
+                  <div style={{ fontSize: 10, color: '#475569', marginBottom: 2 }}>{icon} {label}</div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color }}>{value}</div>
+                </div>
+              ))}
+
+              {/* Rotación */}
+              {pescaActiva.enDescanso && (
+                <div style={{
+                  background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.3)',
+                  borderRadius: 8, padding: '8px 10px',
+                  fontSize: 11, color: '#a5b4fc', lineHeight: 1.5,
+                }}>
+                  🔄 Zona en descanso hoy. El sistema rota las áreas para no sobrecargar el mismo arrecife dos días seguidos.
+                </div>
+              )}
+            </div>
+
+            {/* Columna derecha — predicción + educación */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+
+              {pescaActiva.estado?.permitida ? (
+                <>
+                  <p style={{ margin: 0, fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: 'rgba(52,211,153,0.7)', textTransform: 'uppercase' }}>
+                    Predicción Claude · NOAA
+                  </p>
+                  <div style={{
+                    background: 'rgba(6,182,212,0.05)', border: '1px solid rgba(6,182,212,0.15)',
+                    borderRadius: 8, padding: '10px 14px',
+                    fontSize: 12, color: '#cbd5e1', lineHeight: 1.7, flex: 1,
+                  }}>
+                    {pescaActiva.prediccion}
+                  </div>
+                </>
+              ) : (
+                <div style={{
+                  background: `${pescaActiva.estado?.color}0a`,
+                  border: `1px solid ${pescaActiva.estado?.color}33`,
+                  borderRadius: 8, padding: '14px',
+                  fontSize: 13, color: '#e2e8f0', lineHeight: 1.7,
+                  display: 'flex', flexDirection: 'column', gap: 8,
+                }}>
+                  <strong style={{ color: pescaActiva.estado?.color, fontSize: 15 }}>
+                    ⛔ Zona no disponible hoy
+                  </strong>
+                  <p style={{ margin: 0 }}>{pescaActiva.estado?.descripcion}</p>
+                  <p style={{ margin: 0, fontSize: 11, color: '#94a3b8' }}>
+                    El sistema protege esta zona para que se recupere. Coral sano hoy = más pesca mañana.
+                  </p>
+                </div>
+              )}
+
+              {/* Educación: conexión coral→pesca */}
+              <div style={{
+                background: 'rgba(52,211,153,0.04)', border: '1px solid rgba(52,211,153,0.12)',
+                borderRadius: 8, padding: '8px 12px',
+                fontSize: 11, color: '#6ee7b7', lineHeight: 1.5,
+              }}>
+                🪸 <strong>¿Por qué importa el coral?</strong> El arrecife es la guardería de los peces.
+                Con DHW {pescaActiva.dhw} — {
+                  pescaActiva.dhw < 1 ? 'el coral está sano y produciendo larvas de peces.'
+                  : pescaActiva.dhw < 4 ? 'hay estrés leve. Pesca con cuidado y evita dañar colonias.'
+                  : pescaActiva.dhw < 8 ? 'el coral está sufriendo. Menos refugio = menos peces en semanas.'
+                  : 'el coral está blanqueando. La pesquería local se verá afectada en meses.'
+                }
+              </div>
+
+              {pescaActiva.alerta && (
+                <div style={{
+                  background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)',
+                  borderRadius: 8, padding: '8px 12px',
+                  fontSize: 11, color: '#fca5a5', lineHeight: 1.5,
+                }}>
+                  ⚠️ {pescaActiva.alerta}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── VISOR 3D ── */}
       {zonaActiva && (
