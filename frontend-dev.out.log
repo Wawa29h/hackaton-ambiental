@@ -72,12 +72,16 @@
  GET / 200 in 113ms
  GET / 200 in 234ms
  GET / 200 in 80ms
- / 500 in 30ms
- ✓ Compiled in 970ms (918 modules)
- ✓ Compiled in 599ms (918 modules)
- ✓ Compiled in 791ms (918 modules)
- ✓ Compiled in 499ms (918 modules)
- ✓ Compiled in 475ms (918 modules)
+ GET / 200 in 758ms
+ GET / 200 in 605ms
+ GET / 200 in 169ms
+ GET / 200 in 74ms
+ GET / 200 in 141ms
+ GET / 200 in 657ms
+ GET / 200 in 626ms
+ GET / 200 in 504ms
+ GET / 200 in 484ms
+ 475ms (918 modules)
  ✓ Compiled in 544ms (918 modules)
  GET / 500 in 29ms
  ✓ Compiled in 4.8s (918 modules)
@@ -117,31 +121,131 @@
  GET / 200 in 93ms
  GET /dashboard 200 in 109ms
  GET /dashboard 200 in 65ms
-18 modules)
- ✓ Compiled in 652ms (918 modules)
- ✓ Compiled in 464ms (918 modules)
- ✓ Compiled in 351ms (918 modules)
- ✓ Compiled in 450ms (918 modules)
- GET / 500 in 29ms
- ✓ Compiled in 586ms (918 modules)
- ✓ Compiled in 681ms (918 modules)
- ✓ Compiled in 605ms (918 modules)
- ✓ Compiled in 874ms (918 modules)
- ✓ Compiled in 477ms (918 modules)
- ✓ Compiled in 538ms (918 modules)
- GET / 500 in 34ms
+ GET / 200 in 715ms
+ GET / 200 in 589ms
+ GET /dashboard 200 in 82ms
+ GET / 200 in 155ms
+ GET /dashboard 200 in 60ms
+ GET / 200 in 76ms
+ GET /dashboard 200 in 48ms
+ GET / 200 in 81ms
+ GET /dashboard 200 in 80ms
+ GET / 200 in 644ms
+ GET / 200 in 607ms
+ GET /dashboard 200 in 60ms
+ GET /dashboard 200 in 92ms
+ GET / 200 in 429ms
+ GET / 200 in 410ms
+ GET /dashboard 200 in 84ms
+ GET /dashboard 200 in 92ms
+GET / 500 in 34ms
  GET / 500 in 14ms
-mpiled in 353ms (755 modules)
- ✓ Compiled in 410ms (755 modules)
- GET / 200 in 55ms
- GET /dashboard 200 in 24ms
- ✓ Compiled in 576ms (755 modules)
- ✓ Compiled in 660ms (755 modules)
- ✓ Compiled in 537ms (755 modules)
- ✓ Compiled in 752ms (755 modules)
- ✓ Compiled in 474ms (755 modules)
- ✓ Compiled in 499ms (755 modules)
- GET / 200 in 79ms
- GET /dashboard 200 in 25ms
- GET / 200 in 30ms
- GET /dashboard 200 in 18ms
+ ✓ Compiled in 9.6s (918 modules)
+ ✓ Compiled in 1161ms (918 modules)
+ ✓ Compiled in 1151ms (918 modules)
+ ✓ Compiled in 6.1s (918 modules)
+ ✓ Compiled in 1244ms (918 modules)
+ ✓ Compiled in 997ms (918 modules)
+ ✓ Compiled in 802ms (918 modules)
+ ✓ Compiled in 700ms (918 modules)
+ ✓ Compiled in 1042ms (918 modules)
+ ✓ Compiled in 914ms (918 modules)
+ ✓ Compiled in 4.2s (918 modules)
+ ✓ Compiled in 807ms (918 modules)
+ ✓ Compiled in 673ms (918 modules)
+ ✓ Compiled in 637ms (918 modules)
+ ✓ Compiled in 718ms (918 modules)
+ ✓ Compiled in 677ms (918 modules)
+ ✓ Compiled in 546ms (918 modules)
+ ✓ Compiled in 662ms (918 modules)
+ ✓ Compiled in 2.7s (918 modules)
+ ✓ Compiled in 811ms (918 modules)
+ ✓ Compiled in 735ms (918 modules)
+ ✓ Compiled in 541ms (918 modules)
+ ✓ Compiled in 726ms (918 modules)
+ ✓ Compiled in 662ms (918 modules)
+ ✓ Compiled in 833ms (918 modules)
+ ✓ Compiled in 535ms (918 modules)
+ ✓ Compiled in 463ms (918 modules)
+ GET / 500 in 668ms
+ GET / 500 in 619ms
+ GET / 500 in 802ms
+ GET / 500 in 811ms
+ GET / 500 in 799ms
+ GET / 500 in 715ms
+ GET / 500 in 791ms
+ GET / 500 in 760ms
+ GET / 500 in 743ms
+piled in 1214ms (1514 modules)
+ ✓ Compiled in 715ms (757 modules)
+ ✓ Compiled in 657ms (757 modules)
+ ✓ Compiled in 2.4s (757 modules)
+ ✓ Compiled in 494ms (757 modules)
+ ✓ Compiled in 3.6s (757 modules)
+ ✓ Compiled in 2.1s (1514 modules)
+ ✓ Compiled in 15.3s (1519 modules)
+ GET / 500 in 830ms
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 3.8s (1742 modules)
+ ✓ Compiled in 1055ms (953 modules)
+ ✓ Compiled in 595ms (953 modules)
+ ✓ Compiled in 634ms (953 modules)
+ ✓ Compiled in 573ms (953 modules)
+ ✓ Compiled in 752ms (953 modules)
+ ✓ Compiled in 493ms (953 modules)
+ ✓ Compiled in 435ms (953 modules)
+ ✓ Compiled in 526ms (953 modules)
+ ✓ Compiled in 811ms (953 modules)
+ ✓ Compiled in 657ms (953 modules)
+ ✓ Compiled in 580ms (953 modules)
+ ✓ Compiled in 551ms (953 modules)
+ ✓ Compiled in 715ms (953 modules)
+ ✓ Compiled in 563ms (953 modules)
+ ✓ Compiled in 436ms (953 modules)
+ ✓ Compiled in 524ms (953 modules)
+ GET / 200 in 759ms
+ GET /dashboard 200 in 927ms
+ GET / 200 in 68ms
+ GET /dashboard 200 in 37ms
+ GET / 200 in 40ms
+ GET /dashboard 200 in 30ms
+ ✓ Compiled in 884ms (953 modules)
+ ✓ Compiled in 482ms (953 modules)
+ ✓ Compiled in 377ms (953 modules)
+ ✓ Compiled in 459ms (953 modules)
+ GET / 200 in 100ms
+ GET /dashboard 200 in 40ms
+ ✓ Compiled in 6.7s (953 modules)
+ ✓ Compiled in 850ms (953 modules)
+ ✓ Compiled in 4.8s (953 modules)
+ ✓ Compiled in 1283ms (953 modules)
+ ✓ Compiled in 589ms (953 modules)
+ ✓ Compiled in 1350ms (953 modules)
+ ✓ Compiled in 1913ms (953 modules)
+ ✓ Compiled in 2.6s (953 modules)
+ ✓ Compiled in 1156ms (953 modules)
+ ✓ Compiled in 613ms (953 modules)
+ ✓ Compiled in 941ms (953 modules)
+ ✓ Compiled in 611ms (953 modules)
+ ✓ Compiled in 947ms (953 modules)
+ ✓ Compiled in 617ms (953 modules)
+ ✓ Compiled in 480ms (953 modules)
+ ✓ Compiled in 616ms (953 modules)
+ GET / 200 in 111ms
+ GET / 200 in 42ms
+ GET /dashboard 200 in 54ms
+ GET /dashboard 200 in 60ms
+ ✓ Compiled in 1981ms (953 modules)
+ ✓ Compiled in 1129ms (953 modules)
+ ✓ Compiled in 844ms (953 modules)
+ ✓ Compiled in 888ms (953 modules)
+ ✓ Compiled in 564ms (953 modules)
+ ✓ Compiled in 795ms (953 modules)
+ ✓ Compiled in 748ms (953 modules)
+ ✓ Compiled in 692ms (953 modules)
+ ✓ Compiled in 699ms (953 modules)
+ ✓ Compiled in 824ms (953 modules)
+ GET / 200 in 136ms
+ GET / 200 in 138ms
+ GET /dashboard 200 in 67ms
+ GET /dashboard 200 in 77ms

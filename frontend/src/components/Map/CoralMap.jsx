@@ -16,6 +16,16 @@ L.Icon.Default.mergeOptions({
 // ── Design tokens ────────────────────────────────────────────────────────────
 const FONT_SANS = "'Outfit', system-ui, sans-serif"
 const FONT_DATA = "'Inter', system-ui, sans-serif"
+const MONO = "'JetBrains Mono','Fira Code','Courier New',monospace"
+const BRAND = {
+  ink: '#2b1454',
+  plum: '#5b1f68',
+  magenta: '#b43a82',
+  coral: '#c85b54',
+  clay: '#d6845d',
+  sand: '#e7ae68',
+  paper: '#fbfaf7',
+}
 const BG0   = '#06111e'
 const BG1   = 'rgba(11, 26, 46, 0.7)'
 const BG2   = 'rgba(255, 255, 255, 0.05)'
@@ -70,10 +80,10 @@ function mergeZonasConApi(apiReefs) {
 }
 
 const CFG = {
-  sano:     { accent: '#0ea5e9', label: 'SANO'      },
-  moderado: { accent: '#f59e0b', label: 'ESTRÉS'    },
-  riesgo:   { accent: '#f43f5e', label: 'EN RIESGO' },
-  critico:  { accent: '#e11d48', label: 'CRÍTICO'   },
+  sano:     { accent: BRAND.plum, label: 'SANO'      },
+  moderado: { accent: BRAND.sand, label: 'ESTRÉS'    },
+  riesgo:   { accent: BRAND.clay, label: 'EN RIESGO' },
+  critico:  { accent: BRAND.coral, label: 'CRÍTICO'   },
 }
 
 // ── Lógica de pesca responsable ──────────────────────────────────────────────
@@ -81,7 +91,7 @@ function getEstadoZona(dhw) {
   if (dhw > 8) return { color:'#ef4444', label:'VEDA',      permitida:false, maxLanchas:0,  descripcion:'Coral en blanqueamiento severo — zona cerrada para recuperación.' }
   if (dhw > 4) return { color:'#f97316', label:'LIMITADA',  permitida:true,  maxLanchas:3,  descripcion:'Coral bajo estrés. Solo pesca de altura, sin buceo ni ancla en coral.' }
   if (dhw > 1) return { color:'#fbbf24', label:'MODERADA',  permitida:true,  maxLanchas:6,  descripcion:'Estrés térmico leve. Pesca moderada permitida, evitar zonas someras.' }
-  return         { color:'#34d399', label:'PERMITIDA', permitida:true,  maxLanchas:10, descripcion:'Coral sano. Pesca responsable permitida — ancla solo en arena.' }
+  return         { color:BRAND.plum, label:'PERMITIDA', permitida:true,  maxLanchas:10, descripcion:'Coral sano. Pesca responsable permitida — ancla solo en arena.' }
 }
 function calcularSotavento(lat, lon, windDirGrados, distKm=9) {
   const rad = ((windDirGrados+180)%360)*(Math.PI/180)
@@ -137,7 +147,7 @@ function createFishIcon(activo=false) {
       display:flex;align-items:center;justify-content:center;font-size:${activo?20:16}px;
       box-shadow:0 0 ${activo?16:8}px rgba(6,182,212,${activo?0.5:0.2})">🎣</div>`})
 }
-const STATUS_COLORS = {sano:'#0ea5e9',moderado:'#f59e0b',riesgo:'#f43f5e',critico:'#e11d48'}
+const STATUS_COLORS = {sano:BRAND.plum,moderado:BRAND.sand,riesgo:BRAND.clay,critico:BRAND.coral}
 const STATUS_LABELS = {sano:'Sano',moderado:'Estrés Térmico',riesgo:'En Riesgo',critico:'Blanqueamiento Severo'}
 function getDHWPorEstado(e){return e==='sano'?2:e==='moderado'?5:e==='riesgo'?9:13}
 function createGlowIcon(estado,activo=false){
@@ -151,23 +161,23 @@ function createGlowIcon(estado,activo=false){
 function MapReady(){const map=useMap();useEffect(()=>{setTimeout(()=>map.invalidateSize(),100)},[map]);return null}
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'https://hackaton-ambiental-production.up.railway.app'
-const SP_COLORS = ['#a78bfa','#34d399','#38bdf8','#fb923c']
+const SP_COLORS = [BRAND.ink,BRAND.plum,BRAND.magenta,BRAND.clay,BRAND.sand]
 const SP_PCT    = [100,94,61,80]
 
 // ── Componentes UI ────────────────────────────────────────────────────────────
 function Label({children}){
   return(
     <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12}}>
-      <span style={{fontFamily:FONT_SANS,fontWeight:600,fontSize:10,color:'#94a3b8',letterSpacing:'0.2em',textTransform:'uppercase',whiteSpace:'nowrap'}}>{children}</span>
-      <div style={{flex:1,height:1,background:'linear-gradient(to right, rgba(255,255,255,0.1), transparent)'}}/>
+      <span style={{fontFamily:FONT_SANS,fontWeight:800,fontSize:10,color:'#64748b',letterSpacing:'0.2em',textTransform:'uppercase',whiteSpace:'nowrap'}}>{children}</span>
+      <div style={{flex:1,height:1,background:'linear-gradient(to right, rgba(15,23,42,0.14), transparent)'}}/>
     </div>
   )
 }
 function MetricBox({label,value,color}){
   return(
-    <div style={{background:'rgba(255,255,255,0.03)',border:B,borderRadius:16,padding:'12px 14px',position:'relative',overflow:'hidden',backdropFilter:'blur(10px)'}}>
+    <div style={{background:'rgba(248,250,252,0.88)',border:'1px solid rgba(15,23,42,0.12)',borderRadius:16,padding:'12px 14px',position:'relative',overflow:'hidden',backdropFilter:'blur(10px)',boxShadow:'0 12px 28px rgba(2,6,23,0.12)'}}>
       <div style={{position:'absolute',top:0,left:0,right:0,height:3,background:color,opacity:0.8}}/>
-      <div style={{fontFamily:FONT_SANS,fontWeight:600,fontSize:9,color:'#94a3b8',letterSpacing:'0.15em',marginBottom:6}}>{label}</div>
+      <div style={{fontFamily:FONT_SANS,fontWeight:800,fontSize:9,color:'#64748b',letterSpacing:'0.15em',marginBottom:6}}>{label}</div>
       <div style={{fontFamily:FONT_DATA,fontSize:22,fontWeight:700,lineHeight:1,color}}>{value}</div>
     </div>
   )
@@ -209,6 +219,32 @@ function weeklySeries(zona) {
   const now = Number(zona?.dhw ?? 0)
   return [0.82,0.88,0.94,1,1.06,1.12,1.18].map(x=>Math.max(0,Number((now*x).toFixed(2))))
 }
+function KoralioBadge(){
+  return (
+    <div style={{
+      position:'absolute',top:16,left:16,zIndex:1000,
+      display:'flex',alignItems:'center',gap:10,
+      background:'rgba(251,250,247,0.93)',backdropFilter:'blur(16px)',
+      border:'1px solid rgba(43,20,84,0.14)',borderRadius:18,
+      boxShadow:'0 18px 42px rgba(43,20,84,0.18)',
+      padding:'10px 13px'
+    }}>
+      <div style={{
+        width:34,height:34,borderRadius:'48% 52% 46% 54%',
+        background:`linear-gradient(135deg, ${BRAND.sand}, ${BRAND.coral} 45%, ${BRAND.plum} 78%, ${BRAND.ink})`,
+        position:'relative',boxShadow:`inset 0 0 0 1px rgba(255,255,255,0.45), 0 8px 16px ${BRAND.plum}33`
+      }}>
+        <span style={{position:'absolute',left:9,top:5,width:1,height:24,background:'rgba(255,255,255,0.38)',transform:'rotate(18deg)'}}/>
+        <span style={{position:'absolute',left:17,top:4,width:1,height:25,background:'rgba(255,255,255,0.28)',transform:'rotate(-16deg)'}}/>
+        <span style={{position:'absolute',left:5,top:16,width:24,height:1,background:'rgba(255,255,255,0.32)',transform:'rotate(9deg)'}}/>
+      </div>
+      <div>
+        <div style={{fontSize:17,fontWeight:950,color:BRAND.ink,letterSpacing:'0.09em',lineHeight:1}}>KORALIO</div>
+        <div style={{fontSize:8,fontWeight:900,color:BRAND.coral,letterSpacing:'0.18em',marginTop:3}}>REEF WATCH</div>
+      </div>
+    </div>
+  )
+}
 function WeeklyChart({zona}) {
   const data = weeklySeries(zona)
   const max = Math.max(1,...data)
@@ -221,13 +257,13 @@ function WeeklyChart({zona}) {
           <div style={{fontSize:14,fontWeight:800,color:'#0f172a'}}>Prediccion semanal</div>
           <div style={{fontSize:11,color:'#64748b'}}>Acumulacion de calor DHW, 7 dias</div>
         </div>
-        <div style={{fontFamily:MONO,fontSize:10,color:'#10b981',background:'rgba(52,211,153,0.12)',padding:'4px 7px'}}>DHW</div>
+        <div style={{fontFamily:MONO,fontSize:10,color:BRAND.plum,background:'rgba(91,31,104,0.1)',padding:'4px 7px'}}>DHW</div>
       </div>
       <svg viewBox="0 0 280 128" style={{width:'100%',height:128,display:'block'}}>
         {[34,58,82,106].map(y=><line key={y} x1="18" x2="262" y1={y} y2={y} stroke="rgba(15,23,42,0.08)" strokeWidth="1"/>)}
-        <polygon points={area} fill="rgba(52,211,153,0.18)"/>
-        <polyline points={points} fill="none" stroke="#10b981" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-        {data.map((v,i)=><circle key={i} cx={18+i*(244/(data.length-1))} cy={112-(v/max)*76} r="3.5" fill="#10b981"/>)}
+        <polygon points={area} fill="rgba(180,58,130,0.16)"/>
+        <polyline points={points} fill="none" stroke={BRAND.magenta} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+        {data.map((v,i)=><circle key={i} cx={18+i*(244/(data.length-1))} cy={112-(v/max)*76} r="3.5" fill={BRAND.magenta}/>)}
         {['Hoy','D2','D3','D4','D5','D6','D7'].map((d,i)=><text key={d} x={18+i*(244/6)} y="126" textAnchor="middle" fontSize="9" fill="#64748b">{d}</text>)}
       </svg>
     </div>
@@ -256,6 +292,7 @@ export default function CoralMap() {
   const [loadingPrediccion,setLoadingPrediccion]= useState(false)
   const [loadingProyeccion,setLoadingProyeccion]= useState(false)
   const [diaPrediccion,   setDiaPrediccion]    = useState(0)
+  const [slide,           setSlide]            = useState(0)
   const [infoOculta,       setInfoOculta]       = useState(false)
   const [twinPos,          setTwinPos]          = useState({ x: null, y: 20 })
   const [twinWidth,        setTwinWidth]        = useState(760)
@@ -448,18 +485,43 @@ export default function CoralMap() {
   const puntoPrediccion = proyeccionActiva[diaPrediccion] ?? proyeccionActiva[0] ?? null
   const dhwVisual = puntoPrediccion?.dhw ?? zonaActiva?.dhw ?? 0
   const baaVisual = puntoPrediccion?.baa ?? zonaActiva?.baa_numeric ?? 0
+  const zonasOrdenadas = [...zonasPesca].sort((a,b)=>(a.dhw??0)-(b.dhw??0))
+  const mejorZona = zonasOrdenadas.find(z=>z.estado?.permitida) ?? zonasOrdenadas[0]
+  const zonaRiesgo = [...zonasPesca].sort((a,b)=>(b.dhw??0)-(a.dhw??0))[0]
+  const zonaGuia = pescaActiva ?? mejorZona
+  const colorGuia = zonaGuia?.estado?.color ?? '#34d399'
+  const decisionPesca = zonaGuia?.estado?.permitida ? 'Si se puede salir' : 'Mejor descansar la zona'
+  const detallePesca = zonaGuia?.estado?.permitida
+    ? `${zonaGuia.nombre}: salir ${extraerHorario(zonaGuia.prediccion)} y pescar del lado protegido.`
+    : `${zonaGuia?.nombre ?? 'Zona seleccionada'} necesita recuperacion hoy.`
+  const resumenProximosDias = zonaRiesgo?.blanqueamiento ?? zonaRiesgo?.alerta ?? 'Sin prediccion disponible.'
+  const saludHoy = saludCoral(zonaGuia?.dhw)
+  const zonasSeguras = zonasPesca.filter(z=>z.estado?.permitida).sort((a,b)=>(a.dhw??0)-(b.dhw??0)).slice(0,3)
+  const slides = [
+    { key:'salud', title:'Salud del coral', eyebrow:'Hoy', color:colorGuia },
+    { key:'semana', title:'Prediccion semanal', eyebrow:'Proximos 7 dias', color:colorGuia },
+    { key:'pesca', title:'Zonas seguras', eyebrow:'Pesca responsable', color:colorGuia },
+  ]
+  const activeSlide = slides[slide % slides.length]
 
   return (
     <div style={{display:'flex',height:'100vh',background:BG0,overflow:'hidden',fontFamily:FONT_SANS}}>
 
       {/* ══ SIDEBAR IZQUIERDO ══ */}
-      <div style={{width:260,flexShrink:0,background:BG1,backdropFilter:'blur(24px)',borderRight:B,display:'flex',flexDirection:'column'}}>
+      <div style={{
+        width:260,flexShrink:0,
+          background:`linear-gradient(180deg, ${BRAND.paper}, rgba(245,239,232,0.97))`,
+        backdropFilter:'blur(24px)',
+        borderRight:'1px solid rgba(15,23,42,0.12)',
+        boxShadow:'18px 0 44px rgba(2,6,23,0.16)',
+        display:'flex',flexDirection:'column'
+      }}>
 
         {/* Logo */}
-        <div style={{padding:'24px 20px 16px',borderBottom:B}}>
-          <div style={{fontFamily:FONT_SANS,fontWeight:600,fontSize:9,color:'#38bdf8',letterSpacing:'0.25em',marginBottom:6}}>SYS // MONITOR</div>
-          <div style={{fontSize:22,fontWeight:700,color:'#f1f5f9',letterSpacing:'-0.01em'}}>CoralWatch</div>
-          <div style={{fontFamily:FONT_SANS,fontWeight:600,fontSize:9,color:'#0ea5e9',letterSpacing:'0.2em',marginTop:4}}>CARIBE · NOAA · LIVE</div>
+        <div style={{padding:'24px 20px 16px',borderBottom:'1px solid rgba(43,20,84,0.12)',background:'rgba(255,255,255,0.78)'}}>
+          <div style={{fontFamily:FONT_SANS,fontWeight:800,fontSize:9,color:BRAND.coral,letterSpacing:'0.25em',marginBottom:6}}>SYS // MONITOR</div>
+          <div style={{fontSize:22,fontWeight:950,color:BRAND.ink,letterSpacing:'0.08em'}}>KORALIO</div>
+          <div style={{fontFamily:FONT_SANS,fontWeight:800,fontSize:9,color:BRAND.plum,letterSpacing:'0.2em',marginTop:4}}>CARIBE · NOAA · LIVE</div>
         </div>
 
         {/* Tabs */}
@@ -467,9 +529,11 @@ export default function CoralMap() {
           {[['arrecife','🪸 Arrecife'],['pesca','🎣 Pesca']].map(([t,label])=>(
             <button key={t} onClick={()=>setTab(t)} style={{
               flex:1,padding:'12px 4px',fontFamily:FONT_SANS,fontWeight:600,fontSize:10,letterSpacing:'0.15em',textTransform:'uppercase',cursor:'pointer',
-              background:tab===t?'rgba(14, 165, 233, 0.1)':'transparent',
-              borderBottom:tab===t?'2px solid #0ea5e9':'2px solid transparent',
-              color:tab===t?'#0ea5e9':'#94a3b8',border:'none',borderBottom:tab===t?'2px solid #0ea5e9':'2px solid transparent',
+              background:tab===t?'rgba(255,255,255,0.9)':'transparent',
+              border:'1px solid rgba(15,23,42,0.08)',
+              borderBottom:tab===t?`2px solid ${BRAND.coral}`:'1px solid rgba(15,23,42,0.08)',
+              color:tab===t?BRAND.ink:'#64748b',
+              boxShadow:tab===t?'0 8px 18px rgba(15,23,42,0.08)':'none',
             }}>{label}</button>
           ))}
         </div>
@@ -540,7 +604,7 @@ export default function CoralMap() {
                 ))}
               </div>
               <div style={{display:'flex',alignItems:'center',gap:6,fontSize:10,fontWeight:800,color:apiOnline?'#047857':'#92400e'}}>
-                <span style={{width:7,height:7,borderRadius:999,background:apiOnline?'#10b981':'#f59e0b'}}/>
+                <span style={{width:7,height:7,borderRadius:999,background:apiOnline?BRAND.plum:BRAND.sand}}/>
                 {apiOnline?'Datos en vivo':'Datos guardados'}
               </div>
             </div>
@@ -554,15 +618,15 @@ export default function CoralMap() {
             const activo=zonaActiva?.id===z.id
             return(
               <button key={z.id} onClick={()=>abrirArrecife(z)} style={{
-                width:'100%',textAlign:'left',padding:'14px 16px',background:'transparent',
-                border:`1px solid ${activo?c.accent+'66':'rgba(255,255,255,0.05)'}`,
+                width:'100%',textAlign:'left',padding:'14px 16px',
+                border:`1px solid ${activo?c.accent+'66':'rgba(15,23,42,0.1)'}`,
                 borderRadius:16, cursor:'pointer', marginBottom:8,
-                background:activo?'rgba(255,255,255,0.05)':'rgba(255,255,255,0.02)',
-                boxShadow:activo?`0 0 15px ${c.accent}22`:''
+                background:activo?'rgba(255,255,255,0.95)':'rgba(255,255,255,0.62)',
+                boxShadow:activo?`0 12px 24px ${c.accent}22`:'0 8px 18px rgba(15,23,42,0.06)'
               }}>
                 <div style={{fontFamily:FONT_SANS,fontWeight:700,fontSize:9,color:c.accent,letterSpacing:'0.2em',marginBottom:4}}>{c.label}</div>
-                <div style={{fontSize:14,fontWeight:600,color:'#e2e8f0',lineHeight:1.3,marginBottom:4}}>{z.nombre}</div>
-                <div style={{fontFamily:FONT_SANS,fontWeight:500,fontSize:10,color:'#94a3b8'}}>{z.pais} · {z.cobertura}%</div>
+                <div style={{fontSize:14,fontWeight:850,color:'#0f172a',lineHeight:1.3,marginBottom:4}}>{z.nombre}</div>
+                <div style={{fontFamily:FONT_SANS,fontWeight:700,fontSize:10,color:'#64748b'}}>{z.pais} · {z.cobertura}%</div>
               </button>
             )
           })}
@@ -571,15 +635,15 @@ export default function CoralMap() {
             const activo=pescaActiva?.id===z.id
             return(
               <button key={z.id} onClick={()=>abrirPesca(z)} style={{
-                width:'100%',textAlign:'left',padding:'14px 16px',background:'transparent',
-                border:`1px solid ${activo?(z.estado?.color??'#0ea5e9')+'66':'rgba(255,255,255,0.05)'}`,
+                width:'100%',textAlign:'left',padding:'14px 16px',
+                border:`1px solid ${activo?(z.estado?.color??'#0ea5e9')+'66':'rgba(15,23,42,0.1)'}`,
                 borderRadius:16, cursor:'pointer', marginBottom:8,
-                background:activo?'rgba(255,255,255,0.05)':'rgba(255,255,255,0.02)',
-                boxShadow:activo?`0 0 15px ${z.estado?.color??'#0ea5e9'}22`:''
+                background:activo?'rgba(255,255,255,0.95)':'rgba(255,255,255,0.62)',
+                boxShadow:activo?`0 12px 24px ${z.estado?.color??'#0ea5e9'}22`:'0 8px 18px rgba(15,23,42,0.06)'
               }}>
                 <div style={{fontFamily:FONT_SANS,fontWeight:700,fontSize:9,color:z.estado?.color??'#0ea5e9',letterSpacing:'0.2em',marginBottom:4}}>{z.estado?.label}</div>
-                <div style={{fontSize:14,fontWeight:600,color:'#e2e8f0',marginBottom:4}}>🎣 {z.nombre}</div>
-                <div style={{fontFamily:FONT_SANS,fontWeight:500,fontSize:10,color:'#94a3b8'}}>DHW {z.dhw} · {z.viento}</div>
+                <div style={{fontSize:14,fontWeight:850,color:'#0f172a',marginBottom:4}}>🎣 {z.nombre}</div>
+                <div style={{fontFamily:FONT_SANS,fontWeight:700,fontSize:10,color:'#64748b'}}>DHW {z.dhw} · {z.viento}</div>
               </button>
             )
           })}
@@ -650,7 +714,7 @@ export default function CoralMap() {
                   ))}
                 </div>
                 <div style={{display:'flex',alignItems:'center',gap:6,fontSize:10,fontWeight:800,color:apiOnline?'#047857':'#92400e'}}>
-                  <span style={{width:7,height:7,borderRadius:999,background:apiOnline?'#10b981':'#f59e0b'}}/>
+                  <span style={{width:7,height:7,borderRadius:999,background:apiOnline?BRAND.plum:BRAND.sand}}/>
                   {apiOnline?'Datos en vivo':'Datos guardados'}
                 </div>
               </div>
@@ -659,9 +723,9 @@ export default function CoralMap() {
         </div>
 
         {/* Footer API status */}
-        <div style={{padding:'12px 16px',borderTop:B,display:'flex',alignItems:'center',gap:8,background:'rgba(255,255,255,0.02)'}}>
-          <span style={{width:8,height:8,borderRadius:'50%',background:apiOnline?'#0ea5e9':'#fbbf24',display:'inline-block',animation:'blink 1.4s step-start infinite',boxShadow:`0 0 8px ${apiOnline?'#0ea5e9':'#fbbf24'}`}}/>
-          <span style={{fontFamily:FONT_SANS,fontWeight:600,fontSize:10,color:apiOnline?'#38bdf8':'#fcd34d',letterSpacing:'0.15em'}}>
+        <div style={{padding:'12px 16px',borderTop:'1px solid rgba(15,23,42,0.1)',display:'flex',alignItems:'center',gap:8,background:'rgba(255,255,255,0.72)'}}>
+          <span style={{width:8,height:8,borderRadius:'50%',background:apiOnline?BRAND.plum:BRAND.sand,display:'inline-block',animation:'blink 1.4s step-start infinite',boxShadow:`0 0 8px ${apiOnline?BRAND.plum:BRAND.sand}`}}/>
+          <span style={{fontFamily:FONT_SANS,fontWeight:800,fontSize:10,color:apiOnline?BRAND.ink:'#92400e',letterSpacing:'0.15em'}}>
             {apiOnline?'API ONLINE':'CACHE LOCAL'}
           </span>
         </div>
@@ -669,6 +733,7 @@ export default function CoralMap() {
 
       {/* ══ MAPA ══ */}
       <div style={{flex:1,minWidth:0,position:'relative'}}>
+        <KoralioBadge/>
         <MapContainer center={[15.5,-85.0]} zoom={6} zoomControl={true} attributionControl={false}
           style={{width:'100%',height:'100%',background:BG0}}>
           <MapReady/>
@@ -679,18 +744,18 @@ export default function CoralMap() {
             data={reefGeoJson} 
             style={(feature) => {
               if (!feature || !feature.geometry || !feature.geometry.coordinates) {
-                return { color: '#34d399', fillColor: '#34d399', fillOpacity: 0.25, weight: 1.5 };
+                return { color: BRAND.plum, fillColor: BRAND.plum, fillOpacity: 0.25, weight: 1.5 };
               }
               let coords = feature.geometry.coordinates;
               if (!Array.isArray(coords) || coords.length === 0) {
-                return { color: '#34d399', fillColor: '#34d399', fillOpacity: 0.25, weight: 1.5 };
+                return { color: BRAND.plum, fillColor: BRAND.plum, fillOpacity: 0.25, weight: 1.5 };
               }
               while (Array.isArray(coords[0])) {
                 if (coords.length === 0) break;
                 coords = coords[0];
               }
               if (coords.length < 2 || typeof coords[0] !== 'number') {
-                return { color: '#34d399', fillColor: '#34d399', fillOpacity: 0.25, weight: 1.5 };
+                return { color: BRAND.plum, fillColor: BRAND.plum, fillOpacity: 0.25, weight: 1.5 };
               }
               const [lng, lat] = coords;
               
@@ -702,7 +767,7 @@ export default function CoralMap() {
                 if (dist < minDist) { minDist = dist; closest = z; }
               }
               
-              const color = closest && STATUS_COLORS[closest.estado] ? STATUS_COLORS[closest.estado] : '#34d399';
+              const color = closest && STATUS_COLORS[closest.estado] ? STATUS_COLORS[closest.estado] : BRAND.plum;
               return { color: color, fillColor: color, fillOpacity: 0.4, weight: 1.5 };
             }}
           />}
@@ -823,22 +888,34 @@ export default function CoralMap() {
         )}
 
         {/* HUD coords */}
-        <div style={{position:'absolute',bottom:16,left:16,zIndex:1000,background:'rgba(11,26,46,0.7)',backdropFilter:'blur(8px)',border:B,borderRadius:12,padding:'8px 12px',fontFamily:FONT_DATA,fontWeight:500,fontSize:10,color:'#94a3b8'}}>
+        <div style={{
+          position:'absolute',bottom:16,left:16,zIndex:1000,
+          background:'rgba(251,250,247,0.92)',backdropFilter:'blur(14px)',
+          border:'1px solid rgba(43,20,84,0.14)',borderRadius:12,
+          boxShadow:'0 14px 34px rgba(43,20,84,0.16)',
+          padding:'8px 12px',fontFamily:FONT_DATA,fontWeight:800,fontSize:10,color:BRAND.ink
+        }}>
           15.50°N · 85.00°W · Z6
         </div>
 
         {/* Leyenda */}
-        <div style={{position:'absolute',bottom:16,right:16,zIndex:1000,background:'rgba(11,26,46,0.7)',backdropFilter:'blur(8px)',border:B,borderRadius:16,padding:'16px'}}>
-          <div style={{fontFamily:FONT_SANS,fontWeight:700,fontSize:9,color:'#0ea5e9',letterSpacing:'0.25em',marginBottom:12}}>RIESGO DE BLANQUEAMIENTO</div>
+        <div style={{
+          position:'absolute',bottom:16,right:16,zIndex:1000,
+          background:'rgba(251,250,247,0.94)',backdropFilter:'blur(14px)',
+          border:'1px solid rgba(43,20,84,0.14)',borderRadius:16,
+          boxShadow:'0 18px 42px rgba(43,20,84,0.18)',
+          padding:'16px'
+        }}>
+          <div style={{fontFamily:FONT_SANS,fontWeight:900,fontSize:9,color:BRAND.coral,letterSpacing:'0.25em',marginBottom:12}}>RIESGO DE BLANQUEAMIENTO</div>
           {Object.entries(STATUS_LABELS).map(([k,label])=>(
-            <div key={k} style={{display:'flex',alignItems:'center',gap:10,fontFamily:FONT_SANS,fontSize:11,color:'#e2e8f0',marginBottom:8}}>
-              <span style={{width:10,height:10,borderRadius:'50%',background:STATUS_COLORS[k],boxShadow:`0 0 8px ${STATUS_COLORS[k]}`,display:'inline-block',flexShrink:0}}/>
+            <div key={k} style={{display:'flex',alignItems:'center',gap:10,fontFamily:FONT_SANS,fontWeight:800,fontSize:11,color:BRAND.ink,marginBottom:8}}>
+              <span style={{width:11,height:11,borderRadius:'50%',background:STATUS_COLORS[k],boxShadow:`0 0 12px ${STATUS_COLORS[k]}66`,display:'inline-block',flexShrink:0}}/>
               {label}
             </div>
           ))}
-          <div style={{borderTop:B,marginTop:10,paddingTop:10}}>
-            <div style={{display:'flex',alignItems:'center',gap:10,fontFamily:FONT_SANS,fontSize:11,color:'#e2e8f0'}}>
-              <span style={{width:10,height:10,borderRadius:'50%',border:'2px dashed #0ea5e9',display:'inline-block',flexShrink:0}}/>
+          <div style={{borderTop:'1px solid rgba(43,20,84,0.12)',marginTop:10,paddingTop:10}}>
+            <div style={{display:'flex',alignItems:'center',gap:10,fontFamily:FONT_SANS,fontWeight:800,fontSize:11,color:BRAND.ink}}>
+              <span style={{width:10,height:10,borderRadius:'50%',border:`2px dashed ${BRAND.magenta}`,display:'inline-block',flexShrink:0}}/>
               Zona de Pesca
             </div>
           </div>
@@ -855,10 +932,10 @@ export default function CoralMap() {
             height: 'calc(100vh - 40px)',
             zIndex: 2000,
             overflow: 'hidden',
-            boxShadow: '0 24px 60px rgba(0,0,0,0.55), 0 8px 20px rgba(0,0,0,0.35)',
-            background: 'rgba(2,6,23,0.62)',
+            boxShadow: '0 24px 60px rgba(2,6,23,0.32), 0 8px 20px rgba(2,6,23,0.18)',
+            background: 'rgba(241,245,249,0.9)',
             backdropFilter: 'blur(18px)',
-            border: `1px solid ${cfgActiva?.accent ?? '#67e8f9'}44`,
+            border: '1px solid rgba(255,255,255,0.55)',
             display: 'flex',
             flexDirection: 'column',
           }}>
@@ -873,7 +950,7 @@ export default function CoralMap() {
                 width:10,
                 zIndex:35,
                 cursor:'ew-resize',
-                background:'linear-gradient(to right, rgba(103,232,249,0.28), transparent)',
+                background:'linear-gradient(to right, rgba(52,211,153,0.28), transparent)',
               }}
             />
             <div style={{
@@ -886,24 +963,24 @@ export default function CoralMap() {
               justifyContent: 'space-between',
               alignItems: 'center',
               padding: '10px 12px',
-              background: 'linear-gradient(to bottom, rgba(2,6,23,0.78), rgba(2,6,23,0))',
+              background: 'linear-gradient(to bottom, rgba(248,250,252,0.92), rgba(248,250,252,0))',
               cursor: 'move',
               userSelect: 'none',
               pointerEvents: 'auto',
             }} onMouseDown={onTwinDragStart}>
               <div style={{ pointerEvents: 'none' }}>
-                <div style={{ fontFamily: MONO, fontSize: 8, color: cfgActiva?.accent ?? '#67e8f9', letterSpacing: '0.2em', marginBottom: 3 }}>
+                <div style={{ fontFamily: MONO, fontSize: 8, color: cfgActiva?.accent ?? '#10b981', letterSpacing: '0.2em', marginBottom: 3, fontWeight: 900 }}>
                   GEMELO DIGITAL · ARRASTRA PARA MOVER
                 </div>
-                <div style={{ fontSize: 14, fontWeight: 800, color: '#f8fafc', letterSpacing: '-0.02em' }}>
+                <div style={{ fontSize: 14, fontWeight: 900, color: '#0f172a', letterSpacing: '-0.02em' }}>
                   {zonaActiva.nombre}
                 </div>
               </div>
               <div style={{display:'flex',gap:6,pointerEvents:'auto'}}>
                 <button onClick={() => setInfoOculta(v => !v)} style={{
-                  background: infoOculta ? `${cfgActiva?.accent ?? '#67e8f9'}22` : 'rgba(2,6,23,0.72)',
-                  border: `1px solid ${cfgActiva?.accent ?? '#67e8f9'}44`,
-                  color: cfgActiva?.accent ?? '#67e8f9',
+                  background: infoOculta ? `${cfgActiva?.accent ?? '#10b981'}22` : 'rgba(255,255,255,0.72)',
+                  border: `1px solid ${cfgActiva?.accent ?? '#10b981'}44`,
+                  color: cfgActiva?.accent ?? '#10b981',
                   padding: '5px 10px',
                   cursor: 'pointer',
                   fontFamily: MONO,
@@ -916,9 +993,9 @@ export default function CoralMap() {
                   setTwinWidth(760)
                   setInfoHeight(260)
                 }} style={{
-                  background: 'rgba(2,6,23,0.72)',
-                  border: '1px solid rgba(148,163,184,0.22)',
-                  color: '#cbd5e1',
+                  background: 'rgba(255,255,255,0.72)',
+                  border: '1px solid rgba(15,23,42,0.12)',
+                  color: '#334155',
                   padding: '5px 10px',
                   cursor: 'pointer',
                   fontFamily: MONO,
@@ -926,9 +1003,9 @@ export default function CoralMap() {
                   letterSpacing: '0.12em',
                 }}>RESET</button>
                 <button onClick={() => setZonaActiva(null)} style={{
-                  background: 'rgba(2,6,23,0.72)',
-                  border: '1px solid rgba(148,163,184,0.22)',
-                  color: '#cbd5e1',
+                  background: 'rgba(255,255,255,0.72)',
+                  border: '1px solid rgba(15,23,42,0.12)',
+                  color: '#334155',
                   padding: '5px 10px',
                   cursor: 'pointer',
                   fontFamily: MONO,
@@ -945,7 +1022,7 @@ export default function CoralMap() {
               flex: '0 0 auto',
               overflow: 'hidden',
               isolation: 'isolate',
-              borderBottom: infoOculta ? 'none' : `1px solid ${cfgActiva?.accent ?? '#67e8f9'}33`,
+              borderBottom: infoOculta ? 'none' : `1px solid ${cfgActiva?.accent ?? '#10b981'}33`,
             }}>
               <ReefViewer
                 zone={zonaActiva.id}
@@ -966,15 +1043,15 @@ export default function CoralMap() {
                   flex:'0 0 12px',
                   height:12,
                   cursor:'ns-resize',
-                  borderTop:`1px solid ${cfgActiva?.accent ?? '#67e8f9'}55`,
-                  borderBottom:'1px solid rgba(15,23,42,0.9)',
-                  background:'linear-gradient(90deg, transparent, rgba(103,232,249,0.18), transparent)',
+                  borderTop:`1px solid ${cfgActiva?.accent ?? '#10b981'}55`,
+                  borderBottom:'1px solid rgba(15,23,42,0.12)',
+                  background:'linear-gradient(90deg, transparent, rgba(52,211,153,0.18), transparent)',
                   display:'flex',
                   alignItems:'center',
                   justifyContent:'center',
                 }}
               >
-                <div style={{width:54,height:2,background:`${cfgActiva?.accent ?? '#67e8f9'}88`}}/>
+                <div style={{width:54,height:2,background:`${cfgActiva?.accent ?? '#10b981'}88`}}/>
               </div>
             )}
 
@@ -984,24 +1061,24 @@ export default function CoralMap() {
               boxSizing: 'border-box',
               display: infoOculta ? 'none' : 'block',
               overflowY: 'auto',
-              background: `linear-gradient(180deg, rgba(2,6,23,0.72), ${BG0}f7)`,
-              borderTop: `1px solid ${cfgActiva?.accent ?? '#67e8f9'}33`,
+              background: 'rgba(241,245,249,0.94)',
+              borderTop: `1px solid ${cfgActiva?.accent ?? '#10b981'}33`,
               padding: '14px 16px 16px',
             }}>
               <div style={{display:'flex',justifyContent:'space-between',gap:16,alignItems:'flex-start',marginBottom:12}}>
                 <div>
-                  <div style={{fontFamily:MONO,fontSize:8,color:cfgActiva?.accent ?? '#67e8f9',letterSpacing:'0.22em',marginBottom:4}}>
+                  <div style={{fontFamily:MONO,fontSize:8,color:cfgActiva?.accent ?? '#10b981',letterSpacing:'0.22em',marginBottom:4,fontWeight:900}}>
                     {zonaActiva.pais.toUpperCase()} · NOAA / CLAUDE
                   </div>
-                  <div style={{fontSize:20,fontWeight:800,color:'#f8fafc',letterSpacing:'-0.02em',lineHeight:1.1}}>
+                  <div style={{fontSize:20,fontWeight:900,color:'#0f172a',letterSpacing:'-0.02em',lineHeight:1.1}}>
                     {zonaActiva.nombre}
                   </div>
                 </div>
                 <div style={{
                   fontFamily:MONO,fontSize:9,padding:'5px 10px',
-                  background:`${cfgActiva?.accent ?? '#67e8f9'}14`,
-                  border:`1px solid ${cfgActiva?.accent ?? '#67e8f9'}44`,
-                  color:cfgActiva?.accent ?? '#67e8f9',
+                  background:`${cfgActiva?.accent ?? '#10b981'}14`,
+                  border:`1px solid ${cfgActiva?.accent ?? '#10b981'}44`,
+                  color:cfgActiva?.accent ?? '#10b981',
                   letterSpacing:'0.16em',
                   whiteSpace:'nowrap',
                 }}>
