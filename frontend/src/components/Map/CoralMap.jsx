@@ -140,85 +140,7 @@ function reefApiAZonaPesca(reef) {
   return zonaBase
 }
 
-// ── PFZ sintético local (sin backend) ────────────────────────────────────────
-// Genera frentes térmicos simulados centrados en la zona de pesca activa.
-// Deriva los puntos día a día con corriente local.
-function generarPfzLocal(zona = null) {
-  const cLat = zona?.coords?.[0] ?? 13.10
-  const cLon = zona?.coords?.[1] ?? -89.60
-  const nombre = zona?.nombre ?? 'la zona'
-  // Semillas relativas al centro de la zona activa
-  const OFFSETS = [
-    { dLat:  0.00, dLon:  0.00, grad: 0.013 },
-    { dLat:  0.15, dLon: -0.20, grad: 0.010 },
-    { dLat: -0.20, dLon:  0.15, grad: 0.012 },
-    { dLat:  0.25, dLon:  0.25, grad: 0.008 },
-    { dLat: -0.10, dLon: -0.30, grad: 0.011 },
-    { dLat:  0.30, dLon: -0.10, grad: 0.007 },
-  ]
-  // Corriente dominante según latitud (Pacífico vs Caribe)
-  const isPacific = cLon < -87
-  const DRIFT_LON = isPacific ? -0.10 : -0.07
-  const DRIFT_LAT = isPacific ? -0.04 : -0.02
-  const sst0 = zona?.sst ? parseFloat(zona.sst) : (isPacific ? 28.8 : 29.5)
-  const CONSEJOS = [
-    `Salir 5:00–6:00 AM hacia zona alta cerca de ${nombre}. Frente activo hoy.`,
-    `Frente desplazado al O. Alta productividad a 15–20 km de ${nombre}. Salir 5:30 AM.`,
-    `Proyección favorable. Zona alta detectada — explorar {coord}.`,
-    `Frentes moderados. Buscar aguas entre ${(sst0-0.5).toFixed(1)}–${(sst0+0.5).toFixed(1)}°C.`,
-    `Corriente favorece peces pelágicos al sur de la zona central.`,
-    `Frente térmico consolidado cerca de {coord}. Máxima probabilidad primeras horas.`,
-    `Dispersión leve de frentes. Navegar entre puntos de alta prob. con GPS.`,
-    `Nuevo frente emergente. Alta probabilidad en aguas de ${sst0.toFixed(1)}°C.`,
-  ]
-  const hoy = new Date()
-  const dias = []
-  for (let d = 0; d < 8; d++) {
-    const fecha = new Date(hoy); fecha.setDate(fecha.getDate() + d)
-    const fechaStr = fecha.toISOString().slice(0, 10)
-    const puntosAlta = []; const puntosMedia = []
-    for (const o of OFFSETS) {
-      const lat = +(cLat + o.dLat + DRIFT_LAT * d).toFixed(4)
-      const lng = +(cLon + o.dLon + DRIFT_LON * d).toFixed(4)
-      const grad = o.grad * Math.max(0.4, 1 - d * 0.07)
-      const intensidad = Math.min(1, grad / 0.005)
-      const sst = +(sst0 + (Math.random() - 0.5) * 0.4).toFixed(2)
-      const ptoBase = { lat, lng, sst, intensidad: +intensidad.toFixed(2) }
-      if (grad >= 0.010) puntosAlta.push(ptoBase)
-      else if (grad >= 0.006) puntosMedia.push(ptoBase)
-      const offset = 0.10
-      ;[[-1,-1],[-1,1],[1,-1],[1,1]].forEach(([dl,dg]) => {
-        const g2 = grad * (0.55 + Math.random() * 0.35)
-        const pto = { lat:+(lat+dl*offset).toFixed(4), lng:+(lng+dg*offset).toFixed(4), sst, intensidad:+Math.min(1,g2/0.005).toFixed(2) }
-        if (g2 >= 0.010) puntosAlta.push(pto)
-        else puntosMedia.push(pto)
-      })
-    }
-    const centroideAlta = puntosAlta.length ? {
-      lat: +(puntosAlta.reduce((s,p)=>s+p.lat,0)/puntosAlta.length).toFixed(3),
-      lng: +(puntosAlta.reduce((s,p)=>s+p.lng,0)/puntosAlta.length).toFixed(3),
-    } : null
-    const coord = centroideAlta ? `${centroideAlta.lat}°N ${Math.abs(centroideAlta.lng).toFixed(2)}°O` : 'zona central'
-    const consejo = CONSEJOS[d].replace('{coord}', coord)
-    dias.push({
-      dia: d, fecha: fechaStr,
-      puntos_alta: puntosAlta, puntos_media: puntosMedia,
-      resumen: {
-        n_alta: puntosAlta.length, n_media: puntosMedia.length,
-        centroide_alta: centroideAlta,
-        sst_media_c: +(puntosAlta.concat(puntosMedia).reduce((s,p)=>s+p.sst,0)/Math.max(1,puntosAlta.length+puntosMedia.length)).toFixed(1),
-        consejo_pescador: consejo,
-      }
-    })
-  }
-  return {
-    zona: nombre,
-    fecha_sst: hoy.toISOString().slice(0,10),
-    generado_en: new Date().toISOString(),
-    sst_stats: { mean_c: sst0 },
-    dias, _fuente: 'sintético-local',
-  }
-}
+
 
 // ── Predicción local de pesca (no requiere API) ──────────────────────────────
 function predLocalPesca(zona) {
@@ -708,14 +630,24 @@ export default function CoralMap() {
   }
   // fetchPfz ya no se usa — PFZ se genera localmente en abrirPesca(z)
 
-  function abrirPesca(z) {
+  async function abrirPesca(z) {
     setPescaActiva(z)
     setZonaActiva(null)
     setPanelWidth(420)
     setPfzDia(0)
-    // Generar PFZ centrado en esta zona específica (inmediato, sin API)
-    setPfzData(generarPfzLocal(z))
+    setPfzData(null) // loading state
     fetchPrediccionViva(z.id)
+    try {
+      const res = await fetch(`${API_URL}/api/pfz/salvador`)
+      if (res.ok) {
+        const data = await res.json()
+        setPfzData(data)
+      } else {
+        console.error('Error del API PFZ:', res.status)
+      }
+    } catch (e) {
+      console.error('Network error PFZ:', e)
+    }
   }
 
   const panelAbierto = pescaActiva

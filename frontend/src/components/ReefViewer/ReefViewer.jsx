@@ -848,37 +848,8 @@ export default function ReefViewer({ zone, dhw: dhwProp, baa, especies: especies
         display: 'flex', gap: 16, alignItems: 'center', zIndex: 30,
         boxShadow: '0 8px 32px rgba(0,0,0,0.5)', flexWrap: 'wrap', justifyContent: 'center'
       }}>
-        {/* Toggle Modo Libre */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button 
-            onClick={() => {
-              setModoLibre(!modoLibre);
-              if (!modoLibre) setDhwLibre(dhwProp || 0);
-            }}
-            style={{
-              background: modoLibre ? '#ef4444' : 'rgba(255,255,255,0.1)',
-              border: `1px solid ${modoLibre ? '#fca5a5' : 'rgba(255,255,255,0.2)'}`,
-              color: '#fff', padding: '4px 8px', borderRadius: 6, cursor: 'pointer',
-              fontFamily: 'monospace', fontSize: 10, fontWeight: 'bold'
-            }}>
-            {modoLibre ? 'MODO LIBRE: ON' : 'MODO LIBRE: OFF'}
-          </button>
-        </div>
-
-        {/* Slider de Deterioro */}
-        {modoLibre && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, borderLeft: '1px solid rgba(255,255,255,0.2)', paddingLeft: 16 }}>
-            <span style={{ color: '#94a3b8', fontSize: 10, fontFamily: 'monospace' }}>DHW: {dhwLibre.toFixed(1)}</span>
-            <input 
-              type="range" min="0" max="30" step="0.5" 
-              value={dhwLibre} onChange={e => setDhwLibre(Number(e.target.value))}
-              style={{ width: 100, accentColor: '#ef4444' }} 
-            />
-          </div>
-        )}
-
         {/* Controles de Cámara */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, borderLeft: '1px solid rgba(255,255,255,0.2)', paddingLeft: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button 
             onClick={() => {
               setAutoRotate(!autoRotate);
