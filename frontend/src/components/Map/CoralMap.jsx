@@ -153,33 +153,37 @@ const STATUS_LABELS = {sano:'Sano',moderado:'Estrés Térmico',riesgo:'En Riesgo
 function getDHWPorEstado(e){return e==='sano'?2:e==='moderado'?5:e==='riesgo'?9:13}
 function createGlowIcon(estado, activo=false){
   const color = STATUS_COLORS[estado] ?? '#34d399'
-  const w = activo ? 32 : 26
-  const h = activo ? 42 : 34
-  // Waypoint SVG: pin con círculo interior y anillo de pulso si activo
-  const ring = activo
-    ? `<circle cx="${w/2}" cy="${h*0.38}" r="${w*0.44}" fill="none" stroke="${color}" stroke-width="1.5" opacity="0.35" style="animation:pulse 1.6s ease-out infinite"/>`
-    : ''
+  const w = activo ? 36 : 28
+  const h = activo ? 48 : 38
+  const cx = w/2, cy = h*0.36
+  // Anillos sonar dobles — más visibles cuando activo, sutiles cuando no
+  const sonarSize = activo ? 44 : 32
+  const sonarOff  = -(sonarSize/2 - cx)
+  const rings = `
+    <div class="sonar-ring" style="width:${sonarSize}px;height:${sonarSize}px;top:${cy - sonarSize/2}px;left:${sonarOff}px;border:2px solid ${color};opacity:0.8"></div>
+    <div class="sonar-ring2" style="width:${sonarSize*0.75}px;height:${sonarSize*0.75}px;top:${cy - sonarSize*0.375}px;left:${sonarOff + sonarSize*0.125}px;border:1.5px solid ${color};opacity:0.6"></div>
+  `
+  const svgPin = `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" style="position:relative;z-index:2">
+    <defs>
+      <filter id="glow-${estado}-${activo}">
+        <feGaussianBlur stdDeviation="${activo?3:1.8}" result="blur"/>
+        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+    <path d="M${cx} ${h-2} C${cx} ${h-2} ${w*0.1} ${h*0.54} ${w*0.1} ${cy}
+             A${w*0.4} ${w*0.4} 0 1 1 ${w*0.9} ${cy}
+             C${w*0.9} ${h*0.54} ${cx} ${h-2} ${cx} ${h-2}Z"
+          fill="${color}" filter="url(#glow-${estado}-${activo})" opacity="${activo?1:0.88}"/>
+    <circle cx="${cx}" cy="${cy}" r="${w*0.17}" fill="white" opacity="0.95"/>
+    ${activo ? `<circle cx="${cx}" cy="${cy}" r="${w*0.09}" fill="${color}" opacity="0.8"/>` : ''}
+  </svg>`
+
   return L.divIcon({
     className: '',
     iconSize:    [w, h],
     iconAnchor:  [w/2, h],
     popupAnchor: [0, -h],
-    html: `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <filter id="glow-${estado}">
-          <feGaussianBlur stdDeviation="${activo?2.5:1.5}" result="blur"/>
-          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
-      </defs>
-      ${ring}
-      <!-- Cuerpo del pin -->
-      <path d="M${w/2} ${h-2} C${w/2} ${h-2} ${w*0.12} ${h*0.55} ${w*0.12} ${h*0.38}
-               A${w*0.38} ${w*0.38} 0 1 1 ${w*0.88} ${h*0.38}
-               C${w*0.88} ${h*0.55} ${w/2} ${h-2} ${w/2} ${h-2}Z"
-            fill="${color}" filter="url(#glow-${estado})" opacity="${activo?1:0.92}"/>
-      <!-- Círculo interior blanco -->
-      <circle cx="${w/2}" cy="${h*0.38}" r="${w*0.18}" fill="white" opacity="0.9"/>
-    </svg>`,
+    html: `<div style="position:relative;width:${w}px;height:${h}px">${rings}${svgPin}</div>`,
   })
 }
 function MapReady(){const map=useMap();useEffect(()=>{setTimeout(()=>map.invalidateSize(),100)},[map]);return null}
@@ -592,11 +596,29 @@ export default function CoralMap() {
         display:'flex',flexDirection:'column'
       }}>
 
-        {/* Logo */}
-        <div style={{padding:'24px 20px 16px',borderBottom:'1px solid rgba(43,20,84,0.12)',background:'rgba(255,255,255,0.78)'}}>
-          <div style={{fontFamily:FONT_SANS,fontWeight:800,fontSize:9,color:BRAND.coral,letterSpacing:'0.25em',marginBottom:6}}>SYS // MONITOR</div>
+        {/* Logo + impacto */}
+        <div style={{padding:'20px 20px 14px',borderBottom:'1px solid rgba(43,20,84,0.12)',background:'rgba(255,255,255,0.78)'}}>
+          <div style={{fontFamily:FONT_SANS,fontWeight:800,fontSize:9,color:BRAND.coral,letterSpacing:'0.25em',marginBottom:4}}>SYS // MONITOR · VEDA DINÁMICA</div>
           <div style={{fontSize:22,fontWeight:950,color:BRAND.ink,letterSpacing:'0.08em'}}>KORALIO</div>
-          <div style={{fontFamily:FONT_SANS,fontWeight:800,fontSize:9,color:BRAND.plum,letterSpacing:'0.2em',marginTop:4}}>CARIBE · NOAA · LIVE</div>
+          <div style={{display:'flex',alignItems:'center',gap:6,marginTop:4,marginBottom:12}}>
+            <div style={{fontFamily:FONT_SANS,fontWeight:800,fontSize:9,color:BRAND.plum,letterSpacing:'0.2em'}}>CARIBE · NOAA · LIVE</div>
+            <div style={{fontFamily:MONO,fontSize:8,color:apiOnline?'#10b981':'#94a3b8',background:apiOnline?'rgba(16,185,129,0.1)':'rgba(148,163,184,0.1)',padding:'2px 5px',borderRadius:4,whiteSpace:'nowrap'}}>
+              {apiOnline ? '● EN VIVO' : '● CACHE'}
+            </div>
+          </div>
+          {/* Números de impacto */}
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:6}}>
+            {[
+              {n:'5',label:'arrecifes'},
+              {n:'1,800+',label:'pescadores'},
+              {n:'NOAA',label:'satélite'},
+            ].map(({n,label})=>(
+              <div key={label} style={{textAlign:'center',background:'rgba(91,31,104,0.07)',border:'1px solid rgba(91,31,104,0.12)',padding:'7px 4px',borderRadius:8}}>
+                <div style={{fontFamily:MONO,fontWeight:900,fontSize:13,color:BRAND.ink,lineHeight:1}}>{n}</div>
+                <div style={{fontFamily:FONT_SANS,fontWeight:700,fontSize:8,color:'#64748b',letterSpacing:'0.12em',textTransform:'uppercase',marginTop:2}}>{label}</div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Tabs */}
@@ -612,6 +634,45 @@ export default function CoralMap() {
             }}>{label}</button>
           ))}
         </div>
+
+        {/* Banner principal: decisión del pescador */}
+        {mejorZona && (()=>{
+          const bannerColor = mejorZona.estado?.color ?? '#34d399'
+          const permitida = mejorZona.estado?.permitida
+          return (
+          <div style={{
+            margin:'10px 12px 0',
+            padding:'11px 13px',
+            background: permitida
+              ? `linear-gradient(135deg,${bannerColor}18,${bannerColor}08)`
+              : 'linear-gradient(135deg,rgba(239,68,68,0.1),rgba(185,28,28,0.05))',
+            border:`1.5px solid ${bannerColor}55`,
+            borderRadius:12,
+            boxShadow:`0 0 0 0 ${bannerColor}`,
+            animation: permitida ? 'glowPulse 3s ease-in-out infinite' : 'none',
+            color: bannerColor,
+          }}>
+            <div style={{fontFamily:MONO,fontWeight:800,fontSize:8,color:'#94a3b8',letterSpacing:'0.22em',marginBottom:6}}>¿SALIR A PESCAR HOY?</div>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8}}>
+              <div style={{fontFamily:FONT_SANS,fontWeight:900,fontSize:16,color:bannerColor,lineHeight:1.1,letterSpacing:'-0.01em'}}>
+                {mejorZona.estado?.label ?? (permitida ? 'Sí se puede' : 'Zona en veda')}
+              </div>
+              <div style={{
+                fontFamily:MONO,fontWeight:800,fontSize:10,
+                color: bannerColor,
+                background:`${bannerColor}18`,
+                border:`1px solid ${bannerColor}33`,
+                padding:'4px 8px',borderRadius:6,whiteSpace:'nowrap'
+              }}>
+                DHW {(mejorZona.dhw??0).toFixed(1)}
+              </div>
+            </div>
+            <div style={{fontFamily:FONT_SANS,fontSize:10,color:'#475569',marginTop:5,lineHeight:1.4}}>
+              {mejorZona.nombre} · máx <strong style={{color:bannerColor}}>{mejorZona.estado?.maxLanchas ?? mejorZona.estado?.max_lanchas ?? '—'}</strong> lanchas hoy
+            </div>
+          </div>
+          )
+        })()}
 
         {/* Carrusel sencillo para pescadores */}
         {false&&zonaGuia&&(
@@ -691,34 +752,65 @@ export default function CoralMap() {
           {tab==='arrecife' && zonasReales.map(z=>{
             const c=CFG[z.estado]
             const activo=zonaActiva?.id===z.id
+            const dhwPct = Math.min(100, ((z.dhw??0)/12)*100)
+            const dhwColor = (z.dhw??0)>8?'#ef4444':(z.dhw??0)>4?'#f97316':(z.dhw??0)>1?'#fbbf24':BRAND.plum
             return(
-              <button key={z.id} onClick={()=>abrirArrecife(z)} style={{
-                width:'100%',textAlign:'left',padding:'14px 16px',
-                border:`1px solid ${activo?c.accent+'66':'rgba(15,23,42,0.1)'}`,
-                borderRadius:16, cursor:'pointer', marginBottom:8,
-                background:activo?'rgba(255,255,255,0.95)':'rgba(255,255,255,0.62)',
-                boxShadow:activo?`0 12px 24px ${c.accent}22`:'0 8px 18px rgba(15,23,42,0.06)'
+              <button key={z.id} onClick={()=>abrirArrecife(z)} className="reef-card" style={{
+                width:'100%',textAlign:'left',padding:'12px 14px 12px 0',
+                border:`1px solid ${activo?c.accent+'55':'rgba(15,23,42,0.08)'}`,
+                borderRadius:12, cursor:'pointer', marginBottom:7,
+                background:activo?'rgba(255,255,255,0.97)':'rgba(255,255,255,0.68)',
+                boxShadow:activo?`0 8px 24px ${c.accent}28,0 2px 6px rgba(15,23,42,0.08)`:'0 2px 8px rgba(15,23,42,0.05)',
+                display:'flex',gap:0,overflow:'hidden',
               }}>
-                <div style={{fontFamily:FONT_SANS,fontWeight:700,fontSize:9,color:c.accent,letterSpacing:'0.2em',marginBottom:4}}>{c.label}</div>
-                <div style={{fontSize:14,fontWeight:850,color:'#0f172a',lineHeight:1.3,marginBottom:4}}>{z.nombre}</div>
-                <div style={{fontFamily:FONT_SANS,fontWeight:700,fontSize:10,color:'#64748b'}}>{z.pais} · {z.cobertura}%</div>
+                {/* Borde izquierdo de color */}
+                <div style={{width:4,flexShrink:0,background:c.accent,borderRadius:'12px 0 0 12px',alignSelf:'stretch',minHeight:52,margin:'-0px 12px 0px 0px'}}/>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:3}}>
+                    <div style={{fontFamily:MONO,fontWeight:800,fontSize:8,color:c.accent,letterSpacing:'0.18em'}}>{c.label}</div>
+                    <div style={{fontFamily:MONO,fontWeight:700,fontSize:8,color:'#94a3b8'}}>DHW {(z.dhw??0).toFixed(1)}</div>
+                  </div>
+                  <div style={{fontSize:13,fontWeight:800,color:'#0f172a',lineHeight:1.25,marginBottom:3}}>{z.nombre}</div>
+                  <div style={{fontFamily:FONT_SANS,fontWeight:600,fontSize:9,color:'#94a3b8',marginBottom:6}}>{z.pais} · cobertura {z.cobertura}%</div>
+                  {/* Barra DHW */}
+                  <div style={{height:3,background:'rgba(15,23,42,0.08)',borderRadius:999,overflow:'hidden'}}>
+                    <div style={{
+                      height:'100%',width:`${dhwPct}%`,
+                      background:`linear-gradient(90deg,${dhwColor}99,${dhwColor})`,
+                      borderRadius:999,
+                      transition:'width 0.6s ease',
+                    }}/>
+                  </div>
+                </div>
               </button>
             )
           })}
 
           {tab==='pesca' && zonasPesca.map(z=>{
             const activo=pescaActiva?.id===z.id
+            const zColor = z.estado?.color ?? '#0ea5e9'
+            const dhwPct = Math.min(100, ((z.dhw??0)/12)*100)
             return(
-              <button key={z.id} onClick={()=>abrirPesca(z)} style={{
-                width:'100%',textAlign:'left',padding:'14px 16px',
-                border:`1px solid ${activo?(z.estado?.color??'#0ea5e9')+'66':'rgba(15,23,42,0.1)'}`,
-                borderRadius:16, cursor:'pointer', marginBottom:8,
-                background:activo?'rgba(255,255,255,0.95)':'rgba(255,255,255,0.62)',
-                boxShadow:activo?`0 12px 24px ${z.estado?.color??'#0ea5e9'}22`:'0 8px 18px rgba(15,23,42,0.06)'
+              <button key={z.id} onClick={()=>abrirPesca(z)} className="reef-card" style={{
+                width:'100%',textAlign:'left',padding:'12px 14px 12px 0',
+                border:`1px solid ${activo?zColor+'55':'rgba(15,23,42,0.08)'}`,
+                borderRadius:12, cursor:'pointer', marginBottom:7,
+                background:activo?'rgba(255,255,255,0.97)':'rgba(255,255,255,0.68)',
+                boxShadow:activo?`0 8px 24px ${zColor}28`:'0 2px 8px rgba(15,23,42,0.05)',
+                display:'flex',overflow:'hidden',
               }}>
-                <div style={{fontFamily:FONT_SANS,fontWeight:700,fontSize:9,color:z.estado?.color??'#0ea5e9',letterSpacing:'0.2em',marginBottom:4}}>{z.estado?.label}</div>
-                <div style={{fontSize:14,fontWeight:850,color:'#0f172a',marginBottom:4}}>🎣 {z.nombre}</div>
-                <div style={{fontFamily:FONT_SANS,fontWeight:700,fontSize:10,color:'#64748b'}}>DHW {z.dhw} · {z.viento}</div>
+                <div style={{width:4,flexShrink:0,background:zColor,borderRadius:'12px 0 0 12px',alignSelf:'stretch',marginRight:12}}/>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:3}}>
+                    <div style={{fontFamily:MONO,fontWeight:800,fontSize:8,color:zColor,letterSpacing:'0.18em'}}>{z.estado?.label ?? '—'}</div>
+                    <div style={{fontFamily:MONO,fontWeight:700,fontSize:8,color:'#94a3b8'}}>DHW {(z.dhw??0).toFixed(1)}</div>
+                  </div>
+                  <div style={{fontSize:13,fontWeight:800,color:'#0f172a',marginBottom:3}}>🎣 {z.nombre}</div>
+                  <div style={{fontFamily:FONT_SANS,fontSize:9,color:'#94a3b8',marginBottom:6}}>{z.viento ?? '—'}</div>
+                  <div style={{height:3,background:'rgba(15,23,42,0.08)',borderRadius:999,overflow:'hidden'}}>
+                    <div style={{height:'100%',width:`${dhwPct}%`,background:`linear-gradient(90deg,${zColor}88,${zColor})`,borderRadius:999,transition:'width 0.6s ease'}}/>
+                  </div>
+                </div>
               </button>
             )
           })}
@@ -1513,13 +1605,22 @@ export default function CoralMap() {
       )}
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700;800&display=swap');
         @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(1.4)}}
         @keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
         @keyframes slideIn{from{transform:translateX(30px);opacity:0}to{transform:translateX(0);opacity:1}}
+        @keyframes sonar{0%{transform:scale(0.6);opacity:0.9}100%{transform:scale(2.8);opacity:0}}
+        @keyframes sonar2{0%{transform:scale(0.6);opacity:0.7}100%{transform:scale(2.2);opacity:0}}
+        @keyframes glowPulse{0%,100%{box-shadow:0 0 8px currentColor,0 0 16px currentColor}50%{box-shadow:0 0 18px currentColor,0 0 36px currentColor}}
+        @keyframes fadeUp{from{transform:translateY(8px);opacity:0}to{transform:translateY(0);opacity:1}}
+        @keyframes dhwFill{from{width:0%}to{width:var(--dhw-pct)}}
+        .reef-card{transition:transform 0.15s ease,box-shadow 0.15s ease}
+        .reef-card:hover{transform:translateY(-1px)}
         .leaflet-popup-content-wrapper{background:transparent!important;box-shadow:none!important;padding:0!important;border-radius:0!important}
         .leaflet-popup-content{margin:0!important}
         .leaflet-popup-tip-container{display:none!important}
+        .sonar-ring{position:absolute;border-radius:50%;pointer-events:none;animation:sonar 2s ease-out infinite}
+        .sonar-ring2{position:absolute;border-radius:50%;pointer-events:none;animation:sonar 2s ease-out infinite 0.7s}
       `}</style>
     </div>
   )
