@@ -462,6 +462,9 @@ export default function CoralMap() {
   const [pfzData,          setPfzData]          = useState(null)
   const [pfzDia,           setPfzDia]           = useState(0)
 
+  const [mostrarPop,       setMostrarPop]       = useState(false)
+  const [pasoPop,          setPasoPop]          = useState(1)
+
   const [twinWidth,        setTwinWidth]        = useState(760)
   const [infoHeight,       setInfoHeight]       = useState(260)
 
@@ -1007,11 +1010,59 @@ export default function CoralMap() {
               )}
 
               {activeSlide.key==='semana'&&(
-                <div style={{display:'grid',gap:8}}>
+                <div style={{display:'grid',gap:8, position: 'relative'}}>
                   <WeeklyChart zona={zonaGuia}/>
                   <div style={{fontSize:12,color:'#334155',fontWeight:700,lineHeight:1.55,background:'rgba(255,255,255,0.62)',border:'1px solid rgba(15,23,42,0.1)',padding:'9px 10px'}}>
                     {resumenProximosDias.slice(0,170)+(resumenProximosDias.length>170?'...':'')}
+                    <div style={{marginTop: 8}}>
+                      <button 
+                        onClick={() => { setMostrarPop(true); setPasoPop(1); }} 
+                        style={{
+                          background: BRAND.plum, color: 'white', border: 'none', 
+                          padding: '4px 10px', borderRadius: 4, cursor: 'pointer', 
+                          fontSize: 11, fontWeight: 'bold'
+                        }}>
+                        ¿Qué hacemos?
+                      </button>
+                    </div>
                   </div>
+
+                  {mostrarPop && (
+                    <div style={{
+                      position: 'absolute', top: 0, left: '105%', width: 220, 
+                      background: 'white', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.15)', 
+                      padding: 12, zIndex: 10, border: '1px solid #e2e8f0'
+                    }}>
+                      <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: 8}}>
+                        <div style={{fontWeight: 'bold', fontSize: 13, color: BRAND.ink}}>Acciones recomendadas</div>
+                        <button onClick={() => setMostrarPop(false)} style={{background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 14}}>✕</button>
+                      </div>
+                      
+                      {pasoPop === 1 ? (
+                        <div style={{fontSize: 12, color: '#475569', marginBottom: 12}}>
+                          Paso 1: Evitar zonas de coral estresadas y buscar aguas más frías y profundas.
+                        </div>
+                      ) : (
+                        <div style={{fontSize: 12, color: '#475569', marginBottom: 12}}>
+                          Paso 2: Reportar cualquier blanqueamiento inusual a las autoridades de conservación.
+                        </div>
+                      )}
+                      
+                      <div style={{display: 'flex', justifyContent: 'flex-end'}}>
+                        {pasoPop === 1 ? (
+                          <button onClick={() => setPasoPop(2)} style={{
+                            background: BRAND.coral, color: 'white', border: 'none', 
+                            padding: '4px 10px', borderRadius: 4, cursor: 'pointer', fontSize: 11
+                          }}>Avanzar</button>
+                        ) : (
+                          <button onClick={() => setMostrarPop(false)} style={{
+                            background: BRAND.coral, color: 'white', border: 'none', 
+                            padding: '4px 10px', borderRadius: 4, cursor: 'pointer', fontSize: 11
+                          }}>Finalizar</button>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
