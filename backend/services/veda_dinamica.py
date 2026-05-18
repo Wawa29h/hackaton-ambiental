@@ -17,11 +17,15 @@ from datetime import date
 
 ZONAS: dict[str, dict] = {
     "los_cobanos": {
-        "lat": 13.524, "lon": -89.807,
+        "lat": 13.529, "lon": -89.814,
         "nombre": "Los Cóbanos", "pais": "El Salvador",
     },
+    "barra_santiago": {
+        "lat": 13.682, "lon": -90.041,
+        "nombre": "Barra de Santiago", "pais": "El Salvador",
+    },
     "roatan": {
-        "lat": 16.320, "lon": -86.535,
+        "lat": 16.326, "lon": -86.538,
         "nombre": "Roatán — Cordelia Banks", "pais": "Honduras",
     },
     "cozumel": {

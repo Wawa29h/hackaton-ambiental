@@ -330,6 +330,7 @@ export default function CoralMap() {
   // Mapeo zona frontend → ID del endpoint /api/zona/{id}
   const ZONA_API_ID = {
     los_cobanos:    'los_cobanos',
+    barra_santiago: 'barra_santiago',
     roatan:         'roatan',
     cozumel:        'cozumel',
     cayos_miskitos: 'cayos_miskitos',

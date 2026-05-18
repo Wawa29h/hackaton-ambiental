@@ -8,26 +8,32 @@ const ERDDAP = 'https://pae-paha.pacioos.hawaii.edu/erddap/griddap/dhw_5km.json'
 
 // Zonas del Arrecife Mesoamericano con coordenadas reales
 const ZONAS = [
-  { slug: 'belize',       nombre: 'Belice — Hol Chan',           lat: 17.025, lon: -88.075 },
-  { slug: 'honduras',     nombre: 'Roatán — Cordelia Banks',      lat: 16.320, lon: -86.535 },
-  { slug: 'nicaragua',    nombre: 'Cayos Miskitos',               lat: 14.380, lon: -82.780 },
-  { slug: 'quintana_roo', nombre: 'Banco Chinchorro — Q. Roo',    lat: 18.750, lon: -87.340 },
+  { slug: 'belize',          nombre: 'Belice — Hol Chan',           lat: 17.025, lon: -88.075 },
+  { slug: 'honduras',        nombre: 'Roatán — Cordelia Banks',      lat: 16.326, lon: -86.538 },
+  { slug: 'nicaragua',       nombre: 'Cayos Miskitos',               lat: 14.380, lon: -82.780 },
+  { slug: 'quintana_roo',    nombre: 'Banco Chinchorro — Q. Roo',    lat: 18.750, lon: -87.340 },
+  { slug: 'los_cobanos',     nombre: 'Los Cóbanos',                  lat: 13.529, lon: -89.814 },
+  { slug: 'barra_santiago',  nombre: 'Barra de Santiago',            lat: 13.682, lon: -90.041 },
 ]
 
 // DHW de referencia mayo 2023 — antes del gran evento de blanqueamiento
 const DHW_MAYO_2023 = {
-  belize:       0.65,
-  honduras:     0.83,
-  nicaragua:    0.41,
-  quintana_roo: 0.92,
+  belize:         0.65,
+  honduras:       0.83,
+  nicaragua:      0.41,
+  quintana_roo:   0.92,
+  los_cobanos:    1.05,  // Pacífico El Salvador — ya estaba en estrés en 2023
+  barra_santiago: 0.28,
 }
 
 // Especie emblema por zona
 const REEF_META = {
-  belize:       { arrecife: 'Hol Chan',         especie: 'Tortuga Carey'      },
-  honduras:     { arrecife: 'Cordelia Banks',   especie: 'Mero Nassau'        },
-  nicaragua:    { arrecife: 'Miskito Cays',     especie: 'Langosta Espinosa'  },
-  quintana_roo: { arrecife: 'Banco Chinchorro', especie: 'Pez Loro Gigante'   },
+  belize:         { arrecife: 'Hol Chan',         especie: 'Tortuga Carey'      },
+  honduras:       { arrecife: 'Cordelia Banks',   especie: 'Mero Nassau'        },
+  nicaragua:      { arrecife: 'Miskito Cays',     especie: 'Langosta Espinosa'  },
+  quintana_roo:   { arrecife: 'Banco Chinchorro', especie: 'Pez Loro Gigante'   },
+  los_cobanos:    { arrecife: 'Los Cóbanos',       especie: 'Tortuga Carey'      },
+  barra_santiago: { arrecife: 'Barra de Santiago', especie: 'Pez Guitarrón'     },
 }
 
 const BAA_LABELS = {

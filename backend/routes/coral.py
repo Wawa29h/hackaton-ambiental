@@ -50,7 +50,8 @@ def _dhw_desde_reefs(zona_id: str) -> float:
     """Lee el DHW del reefs.json generado por noaa.js."""
     # Mapeo de zona_id (frontend) a slug (reefs.json)
     SLUG_MAP = {
-        "los_cobanos":    None,          # no estÃ¡ en reefs.json aÃºn
+        "los_cobanos":    "los_cobanos",
+        "barra_santiago": "barra_santiago",
         "roatan":         "honduras",
         "cozumel":        "quintana_roo",
         "cayos_miskitos": "nicaragua",
