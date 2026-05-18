@@ -26,12 +26,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Rutas de Copernicus + veda dinÃ¡mica
+# Rutas de Copernicus + veda dinámica
 try:
     from backend.routes.coral import router as coral_router
     app.include_router(coral_router)
 except Exception as _e:
     print(f"[main] No se pudo cargar routes/coral.py: {_e}")
+
+# Rutas de Zonas de Pesca Potencial (PFZ)
+try:
+    from backend.routes.pfz import router as pfz_router
+    app.include_router(pfz_router)
+except Exception as _e:
+    print(f"[main] No se pudo cargar routes/pfz.py: {_e}")
 
 
 class MakeWebhookRequest(BaseModel):
