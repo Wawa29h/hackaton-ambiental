@@ -328,11 +328,11 @@ function Label({children, dark=false}){
   return(
     <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12}}>
       <span style={{fontFamily:MONO,fontWeight:700,fontSize:9,
-        color: dark ? '#94a3b8' : '#38bdf8',
+        color: dark ? '#334155' : '#0284c7',
         letterSpacing:'0.22em',textTransform:'uppercase',whiteSpace:'nowrap'}}>{children}</span>
       <div style={{flex:1,height:1,background: dark
-        ? 'linear-gradient(to right, rgba(15,23,42,0.14), transparent)'
-        : 'linear-gradient(to right, rgba(56,189,248,0.2), transparent)'}}/>
+        ? 'linear-gradient(to right, rgba(15,23,42,0.28), transparent)'
+        : 'linear-gradient(to right, rgba(2,132,199,0.35), transparent)'}}/>
     </div>
   )
 }
@@ -1630,22 +1630,22 @@ export default function CoralMap() {
               <div style={{display:'grid',gridTemplateColumns:'repeat(2, minmax(0, 1fr))',gap:'6px 12px',marginBottom:12}}>
                 {(zonaActiva.especies??[]).slice(0,6).map((esp,i)=>(
                   <div key={esp} style={{borderLeft:`2px solid ${SP_COLORS[i%SP_COLORS.length]}`,paddingLeft:8}}>
-                    <div style={{fontSize:11,color:'#e2e8f0',fontStyle:'italic',lineHeight:1.25}}>{esp}</div>
-                    <div style={{height:2,background:'rgba(255,255,255,0.07)',marginTop:4}}>
+                    <div style={{fontSize:11,color:'#1e293b',fontStyle:'italic',fontWeight:700,lineHeight:1.25}}>{esp}</div>
+                    <div style={{height:2,background:'rgba(15,23,42,0.12)',marginTop:4}}>
                       <div style={{width:`${SP_PCT[i%SP_PCT.length]}%`,height:'100%',background:SP_COLORS[i%SP_COLORS.length]}}/>
                     </div>
                   </div>
                 ))}
               </div>
 
-              <div style={{fontFamily:MONO,fontSize:10,color:'#cbd5e1',lineHeight:1.7,borderTop:B,paddingTop:10,marginBottom:12}}>
+              <div style={{fontFamily:MONO,fontSize:10,color:'#475569',fontWeight:700,lineHeight:1.7,borderTop:'1px solid rgba(15,23,42,0.16)',paddingTop:10,marginBottom:12}}>
                 {zonaActiva.descripcion}
               </div>
 
               {zonaActiva.predBlanqueamiento&&(
                 <>
                   <Label>BLANQUEAMIENTO · PREDICCIÓN</Label>
-                  <div style={{borderLeft:'2px solid rgba(239,68,68,0.45)',paddingLeft:10,fontFamily:MONO,fontSize:10,color:'#fecaca',lineHeight:1.75,marginBottom:12}}>
+                  <div style={{borderLeft:'2px solid rgba(185,28,28,0.75)',paddingLeft:10,fontFamily:MONO,fontSize:10,color:'#991b1b',fontWeight:700,lineHeight:1.75,marginBottom:12}}>
                     {zonaActiva.predBlanqueamiento}
                   </div>
                 </>
@@ -1654,7 +1654,7 @@ export default function CoralMap() {
               {zonaActiva.predPesca&&(
                 <>
                   <Label>PESCA RESPONSABLE · HOY</Label>
-                  <div style={{borderLeft:'2px solid rgba(52,211,153,0.45)',paddingLeft:10,fontFamily:MONO,fontSize:10,color:'#a7f3d0',lineHeight:1.75,marginBottom:12}}>
+                  <div style={{borderLeft:'2px solid rgba(22,101,52,0.75)',paddingLeft:10,fontFamily:MONO,fontSize:10,color:'#166534',fontWeight:700,lineHeight:1.75,marginBottom:12}}>
                     {zonaActiva.predPesca}
                   </div>
                 </>
@@ -1663,12 +1663,12 @@ export default function CoralMap() {
               <Label dark>ALERTA SATELITAL · AHORA</Label>
               {loadingPrediccion?(
                 <div style={{display:'flex',alignItems:'center',gap:8,paddingLeft:10}}>
-                  <span style={{width:5,height:5,background:'#6366f1',animation:'blink 0.8s step-start infinite',display:'inline-block'}}/>
-                  <span style={{fontFamily:MONO,fontSize:9,color:'#6366f1',letterSpacing:'0.15em'}}>PROCESANDO DATOS NOAA...</span>
+                  <span style={{width:5,height:5,background:'#4f46e5',animation:'blink 0.8s step-start infinite',display:'inline-block'}}/>
+                  <span style={{fontFamily:MONO,fontSize:9,color:'#3730a3',fontWeight:800,letterSpacing:'0.15em'}}>PROCESANDO DATOS NOAA...</span>
                 </div>
               ):prediccionViva?.alerta&&(
-                <div style={{borderLeft:'2px solid rgba(99,102,241,0.35)',paddingLeft:10,fontFamily:MONO,fontSize:10,color:'#334155',lineHeight:1.75}}>
-                  <div style={{fontFamily:MONO,fontSize:8,color:'#64748b',letterSpacing:'0.18em',marginBottom:5}}>
+                <div style={{borderLeft:'2px solid rgba(79,70,229,0.75)',paddingLeft:10,fontFamily:MONO,fontSize:10,color:'#1e293b',fontWeight:600,lineHeight:1.75}}>
+                  <div style={{fontFamily:MONO,fontSize:8,color:'#475569',fontWeight:800,letterSpacing:'0.18em',marginBottom:5}}>
                     COPERNICUS · {prediccionViva.temp!=null?`${prediccionViva.temp}°C · `:''}DHW {prediccionViva.dhw??'—'}
                   </div>
                   {prediccionViva.alerta}
