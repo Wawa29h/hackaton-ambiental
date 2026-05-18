@@ -165,11 +165,15 @@ const SP_COLORS = [BRAND.ink,BRAND.plum,BRAND.magenta,BRAND.clay,BRAND.sand]
 const SP_PCT    = [100,94,61,80]
 
 // ── Componentes UI ────────────────────────────────────────────────────────────
-function Label({children}){
+function Label({children, dark=false}){
   return(
     <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12}}>
-      <span style={{fontFamily:FONT_SANS,fontWeight:800,fontSize:10,color:'#64748b',letterSpacing:'0.2em',textTransform:'uppercase',whiteSpace:'nowrap'}}>{children}</span>
-      <div style={{flex:1,height:1,background:'linear-gradient(to right, rgba(15,23,42,0.14), transparent)'}}/>
+      <span style={{fontFamily:MONO,fontWeight:700,fontSize:9,
+        color: dark ? '#94a3b8' : '#38bdf8',
+        letterSpacing:'0.22em',textTransform:'uppercase',whiteSpace:'nowrap'}}>{children}</span>
+      <div style={{flex:1,height:1,background: dark
+        ? 'linear-gradient(to right, rgba(15,23,42,0.14), transparent)'
+        : 'linear-gradient(to right, rgba(56,189,248,0.2), transparent)'}}/>
     </div>
   )
 }

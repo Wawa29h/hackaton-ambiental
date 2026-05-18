@@ -433,12 +433,11 @@ export default function ReefViewer({ zone, dhw, baa, especies: especiesProp, cob
 
     const renderer = new THREE.WebGLRenderer({
       antialias: true,
-      alpha: true,
+      alpha: false,
     })
     renderer.setSize(W, H)
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
-    renderer.setClearColor(0x000000, 0)
-    renderer.domElement.style.background = 'transparent'
+    renderer.setClearColor(0x021525, 1)
     renderer.domElement.style.display = 'block'
     mount.appendChild(renderer.domElement)
     rendererRef.current = renderer
@@ -629,7 +628,7 @@ export default function ReefViewer({ zone, dhw, baa, especies: especiesProp, cob
       const baseClear = new THREE.Color(cfg.clearColor);
       const murkClear = new THREE.Color(0x1a2a1a);
       baseClear.lerp(murkClear, 1 - healthFactor);
-      rendererRef.current.setClearColor(baseClear, 0);
+      rendererRef.current.setClearColor(baseClear, 1); // opaco — fondo marino visible
     }
 
     // Limpiar todo lo vivo anterior
@@ -804,7 +803,10 @@ export default function ReefViewer({ zone, dhw, baa, especies: especiesProp, cob
   }
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%', minHeight: showHud ? 360 : 0, overflow: 'hidden' }} onPointerDown={handleInteraction}>
+    <div style={{
+      position: 'relative', width: '100%', height: '100%', minHeight: showHud ? 360 : 0, overflow: 'hidden',
+      background: `linear-gradient(180deg, ${cfg.ocean === 'pacific' ? '#031a0e' : '#021525'} 0%, ${cfg.ocean === 'pacific' ? '#041510' : '#010d18'} 100%)`,
+    }} onPointerDown={handleInteraction}>
       {/* Pista de Audio Bioacústico (Placeholder). Reemplazar src con un mp3 real de ecosistema sano */}
       <audio ref={audioRef} loop src="https://actions.google.com/sounds/v1/water/underwater_bubbles.ogg" crossOrigin="anonymous" />
       
