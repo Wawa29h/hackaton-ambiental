@@ -50,7 +50,9 @@ function gradosACardinal(deg) {
 }
 
 function hoy() {
-  return new Date().toISOString().slice(0, 10)
+  const d = new Date()
+  d.setDate(d.getDate() - 3)
+  return d.toISOString().slice(0, 10)
 }
 
 function haceNDias(n) {

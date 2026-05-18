@@ -573,11 +573,7 @@ export default function CoralMap() {
   },[])
 
   async function enviarAlertaMake() {
-    const webhookUrl = import.meta.env.VITE_MAKE_WEBHOOK
-    if (!webhookUrl) {
-      alert('Agrega VITE_MAKE_WEBHOOK en el .env del frontend')
-      return
-    }
+    const webhookUrl = import.meta.env.VITE_MAKE_WEBHOOK || 'https://hook.us2.make.com/pyrpj1e2l79ljamfxdn2k6osve9t3cul'
     setAlertaEstado('sending')
 
     // Construir payload con la zona activa (o un resumen general si no hay zona abierta)
