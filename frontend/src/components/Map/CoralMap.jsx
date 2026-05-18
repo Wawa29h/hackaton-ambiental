@@ -656,10 +656,22 @@ export default function CoralMap() {
           ))}
         </div>
 
-        {/* Banner principal: decisión del pescador */}
-        {mejorZona && (()=>{
-          const bannerColor = mejorZona.estado?.color ?? '#34d399'
-          const permitida = mejorZona.estado?.permitida
+        {/* Banner principal: decisión del pescador — refleja zona activa */}
+        {(()=>{
+          // Prioridad: arrecife activo → zona pesca activa → mejor zona general
+          const zonaRef = zonaActiva
+            ? zonasPesca.find(z => z.id === zonaActiva.id || z.nombre === zonaActiva.nombre) ?? mejorZona
+            : pescaActiva ?? mejorZona
+          if (!zonaRef) return null
+
+          // Si viene de un arrecife, derivar estado desde DHW
+          const estadoBanner = zonaRef.estado ?? getEstadoZona(zonaRef.dhw ?? zonaActiva?.dhw ?? 0)
+          const bannerColor  = estadoBanner?.color ?? '#34d399'
+          const permitida    = estadoBanner?.permitida ?? true
+          const nombre       = zonaActiva?.nombre ?? zonaRef.nombre
+          const dhw          = zonaActiva?.dhw ?? zonaRef.dhw ?? 0
+          const maxLanchas   = estadoBanner?.maxLanchas ?? estadoBanner?.max_lanchas ?? '—'
+
           return (
           <div style={{
             margin:'10px 12px 0',
@@ -669,27 +681,25 @@ export default function CoralMap() {
               : 'linear-gradient(135deg,rgba(239,68,68,0.1),rgba(185,28,28,0.05))',
             border:`1.5px solid ${bannerColor}55`,
             borderRadius:12,
-            boxShadow:`0 0 0 0 ${bannerColor}`,
             animation: permitida ? 'glowPulse 3s ease-in-out infinite' : 'none',
             color: bannerColor,
+            transition:'all 0.3s ease',
           }}>
-            <div style={{fontFamily:MONO,fontWeight:800,fontSize:8,color:'#94a3b8',letterSpacing:'0.22em',marginBottom:6}}>¿SALIR A PESCAR HOY?</div>
+            <div style={{fontFamily:MONO,fontWeight:800,fontSize:8,color:'#94a3b8',letterSpacing:'0.22em',marginBottom:6}}>
+              {zonaActiva ? `🪸 ${zonaActiva.pais?.toUpperCase() ?? 'ARRECIFE'}` : '¿SALIR A PESCAR HOY?'}
+            </div>
             <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8}}>
               <div style={{fontFamily:FONT_SANS,fontWeight:900,fontSize:16,color:bannerColor,lineHeight:1.1,letterSpacing:'-0.01em'}}>
-                {mejorZona.estado?.label ?? (permitida ? 'Sí se puede' : 'Zona en veda')}
+                {estadoBanner?.label ?? (permitida ? 'Permitida' : 'Veda')}
               </div>
-              <div style={{
-                fontFamily:MONO,fontWeight:800,fontSize:10,
-                color: bannerColor,
-                background:`${bannerColor}18`,
-                border:`1px solid ${bannerColor}33`,
-                padding:'4px 8px',borderRadius:6,whiteSpace:'nowrap'
-              }}>
-                DHW {(mejorZona.dhw??0).toFixed(1)}
+              <div style={{fontFamily:MONO,fontWeight:800,fontSize:10,color:bannerColor,
+                background:`${bannerColor}18`,border:`1px solid ${bannerColor}33`,
+                padding:'4px 8px',borderRadius:6,whiteSpace:'nowrap'}}>
+                DHW {(dhw).toFixed(1)}
               </div>
             </div>
             <div style={{fontFamily:FONT_SANS,fontSize:10,color:'#475569',marginTop:5,lineHeight:1.4}}>
-              {mejorZona.nombre} · máx <strong style={{color:bannerColor}}>{mejorZona.estado?.maxLanchas ?? mejorZona.estado?.max_lanchas ?? '—'}</strong> lanchas hoy
+              {nombre} · máx <strong style={{color:bannerColor}}>{maxLanchas}</strong> lanchas hoy
             </div>
           </div>
           )
