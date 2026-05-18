@@ -505,14 +505,35 @@ export default function CoralMap() {
       return
     }
     setAlertaEstado('sending')
+
+    // Construir payload con la zona activa (o un resumen general si no hay zona abierta)
+    const zona = zonaActiva
+    const payload = zona ? {
+      arrecife:        zona.nombre,
+      pais:            zona.pais ?? '',
+      nivel_de_alerta: STATUS_LABELS[zona.estado] ?? zona.estado ?? 'Desconocido',
+      estado:          zona.estado ?? '',
+      dhw:             zona.dhw ?? 0,
+      sst:             zona.sst ?? 0,
+      cobertura_coral: zona.cobertura ? `${zona.cobertura}%` : '',
+      mensaje_pescador: zona.predictions?.alerta ?? zona.descripcion ?? '',
+      fecha:           new Date().toLocaleDateString('es-SV', { day:'2-digit', month:'long', year:'numeric' }),
+      fuente:          'CoralWatch — NOAA Coral Reef Watch',
+    } : {
+      arrecife:        'Todos los arrecifes monitoreados',
+      nivel_de_alerta: 'Ver reporte completo',
+      fecha:           new Date().toLocaleDateString('es-SV', { day:'2-digit', month:'long', year:'numeric' }),
+      fuente:          'CoralWatch — NOAA Coral Reef Watch',
+    }
+
     try {
-      const res  = await fetch(`${API_URL}/alerts/send-to-make`, {
+      // Enviar directo al webhook de Make (evita filtro de nivel crítico del backend)
+      const res = await fetch(webhookUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ webhook_url: webhookUrl }),
+        body: JSON.stringify(payload),
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.detail ?? 'Error del servidor')
+      if (!res.ok) throw new Error(`Make respondió ${res.status}`)
       setAlertaEstado('ok')
       setTimeout(() => setAlertaEstado(null), 4000)
     } catch (e) {
