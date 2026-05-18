@@ -328,6 +328,9 @@ export default function CoralMap() {
   const [slide,           setSlide]            = useState(0)
   const [infoOculta,       setInfoOculta]       = useState(false)
   const [twinPos,          setTwinPos]          = useState({ x: null, y: 20 })
+  const [pfzData,          setPfzData]          = useState(null)
+  const [pfzDia,           setPfzDia]           = useState(0)
+  const [loadingPfz,       setLoadingPfz]       = useState(false)
   const [twinWidth,        setTwinWidth]        = useState(760)
   const [infoHeight,       setInfoHeight]       = useState(260)
 
@@ -556,7 +559,25 @@ export default function CoralMap() {
     fetchPrediccionViva(z.id)
     fetchProyeccionSemanal(z.id)
   }
-  function abrirPesca(z)   {setPescaActiva(z);setZonaActiva(null);setPanelWidth(380);fetchPrediccionViva(z.id)}
+  async function fetchPfz() {
+    if (pfzData) { return }   // ya cargado en esta sesión
+    setLoadingPfz(true)
+    try {
+      const res  = await fetch(`${API_URL}/api/pfz/salvador`)
+      const data = await res.json()
+      if (data?.dias) setPfzData(data)
+    } catch(e) { console.error('[PFZ]', e) }
+    finally    { setLoadingPfz(false) }
+  }
+
+  function abrirPesca(z) {
+    setPescaActiva(z)
+    setZonaActiva(null)
+    setPanelWidth(420)
+    setPfzDia(0)
+    fetchPrediccionViva(z.id)
+    fetchPfz()
+  }
 
   const panelAbierto = pescaActiva
   const cfgActiva    = zonaActiva ? CFG[zonaActiva.estado] : null
@@ -977,6 +998,18 @@ export default function CoralMap() {
                 dashArray:z.estado?.permitida?'6 4':'2 4'}}/>
               <Marker position={z.coords} icon={createFishIcon(pescaActiva?.id===z.id)} eventHandlers={{click:()=>abrirPesca(z)}}/>
             </React.Fragment>
+          ))}
+
+          {/* ── Capa PFZ: frentes térmicos ── */}
+          {pfzData?.dias?.[pfzDia]?.puntos_alta?.map((p,i)=>(
+            <Circle key={`pfz-a-${pfzDia}-${i}`}
+              center={[p.lat, p.lng]} radius={15000}
+              pathOptions={{color:'#ef4444',fillColor:'#ef4444',fillOpacity:Math.min(0.45,p.intensidad*0.55),weight:0,stroke:false}}/>
+          ))}
+          {pfzData?.dias?.[pfzDia]?.puntos_media?.map((p,i)=>(
+            <Circle key={`pfz-m-${pfzDia}-${i}`}
+              center={[p.lat, p.lng]} radius={11000}
+              pathOptions={{color:'#f97316',fillColor:'#fbbf24',fillOpacity:Math.min(0.3,p.intensidad*0.4),weight:0,stroke:false}}/>
           ))}
 
           {zonasReales.map(z=>(
@@ -1597,6 +1630,110 @@ export default function CoralMap() {
                       ⚠️ {pescaActiva.alerta}
                     </div>
                   )}
+
+                  {/* ── PFZ: Zonas de Pesca Potencial ── */}
+                  <div style={{borderTop:B,paddingTop:18,marginTop:4}}>
+                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14}}>
+                      <div>
+                        <div style={{fontFamily:MONO,fontWeight:800,fontSize:8,color:'#ef4444',letterSpacing:'0.22em',marginBottom:3}}>ZONAS DE PESCA POTENCIAL</div>
+                        <div style={{fontFamily:FONT_SANS,fontWeight:700,fontSize:11,color:'#f1f5f9'}}>
+                          {loadingPfz ? 'Calculando frentes térmicos...' : pfzData ? 'Frentes térmicos · Pacífico SV' : 'Sin datos PFZ'}
+                        </div>
+                      </div>
+                      {loadingPfz && <span style={{width:10,height:10,borderRadius:'50%',background:'#ef4444',animation:'blink 0.6s step-start infinite',display:'inline-block'}}/>}
+                    </div>
+
+                    {pfzData?.dias && (()=>{
+                      const dia     = pfzData.dias[pfzDia]
+                      const resumen = dia?.resumen ?? {}
+                      const centro  = resumen.centroide_alta
+                      const nAlta   = resumen.n_alta ?? 0
+                      const nMedia  = resumen.n_media ?? 0
+                      const sst     = resumen.sst_media_c
+                      const consejo = resumen.consejo_pescador ?? ''
+
+                      return (
+                        <>
+                          {/* Slider días */}
+                          <div style={{marginBottom:14}}>
+                            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+                              <span style={{fontFamily:MONO,fontSize:9,color:'#64748b',letterSpacing:'0.15em'}}>
+                                {pfzDia === 0 ? '📡 HOY' : `🔮 DÍA +${pfzDia}`}
+                              </span>
+                              <span style={{fontFamily:MONO,fontSize:9,color:'#64748b'}}>
+                                {dia?.fecha ?? ''}
+                              </span>
+                            </div>
+                            <input type="range" min={0} max={7} step={1} value={pfzDia}
+                              onChange={e=>setPfzDia(Number(e.target.value))}
+                              style={{width:'100%',accentColor:'#ef4444',cursor:'pointer',height:4}}/>
+                            <div style={{display:'flex',justifyContent:'space-between',marginTop:4}}>
+                              {[0,1,2,3,4,5,6,7].map(d=>(
+                                <button key={d} onClick={()=>setPfzDia(d)} style={{
+                                  width:20,height:20,borderRadius:'50%',border:'none',cursor:'pointer',fontSize:8,
+                                  fontFamily:MONO,fontWeight:700,
+                                  background: d===pfzDia ? '#ef4444' : 'rgba(255,255,255,0.07)',
+                                  color: d===pfzDia ? '#fff' : '#64748b',
+                                  transition:'all 0.15s'
+                                }}>{d===0?'H':d}</button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Métricas del día */}
+                          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginBottom:12}}>
+                            {[
+                              {label:'ALTA',  value:nAlta,  color:'#ef4444'},
+                              {label:'MEDIA', value:nMedia, color:'#f97316'},
+                              {label:'SST',   value:sst ? `${sst}°C` : '—', color:'#fbbf24'},
+                            ].map(m=>(
+                              <div key={m.label} style={{background:'rgba(255,255,255,0.04)',border:`1px solid ${m.color}33`,borderRadius:10,padding:'8px 6px',textAlign:'center'}}>
+                                <div style={{fontFamily:MONO,fontWeight:900,fontSize:16,color:m.color,lineHeight:1}}>{m.value}</div>
+                                <div style={{fontFamily:MONO,fontSize:7,color:'#475569',letterSpacing:'0.15em',marginTop:3}}>{m.label}</div>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Centroide y consejo */}
+                          {centro && (
+                            <div style={{background:'rgba(239,68,68,0.07)',border:'1px solid rgba(239,68,68,0.2)',borderRadius:10,padding:'10px 12px',marginBottom:10}}>
+                              <div style={{fontFamily:MONO,fontSize:8,color:'#ef4444',letterSpacing:'0.18em',marginBottom:5}}>📍 CENTRO ZONA ALTA</div>
+                              <div style={{fontFamily:MONO,fontWeight:800,fontSize:12,color:'#fca5a5'}}>
+                                {centro.lat.toFixed(3)}°N · {Math.abs(centro.lng).toFixed(3)}°O
+                              </div>
+                            </div>
+                          )}
+                          {consejo && (
+                            <div style={{borderLeft:'3px solid rgba(239,68,68,0.4)',paddingLeft:12,fontFamily:FONT_SANS,fontSize:11,color:'#cbd5e1',lineHeight:1.7}}>
+                              {consejo}
+                            </div>
+                          )}
+                          {nAlta === 0 && !loadingPfz && (
+                            <div style={{fontFamily:FONT_SANS,fontSize:11,color:'#64748b',textAlign:'center',padding:'10px 0'}}>
+                              Sin frentes activos este día — explorar aguas costeras
+                            </div>
+                          )}
+
+                          {/* Leyenda */}
+                          <div style={{display:'flex',gap:14,marginTop:12}}>
+                            {[{color:'#ef4444',label:'Alta prob.'},{color:'#fbbf24',label:'Media prob.'}].map(l=>(
+                              <div key={l.label} style={{display:'flex',alignItems:'center',gap:5}}>
+                                <div style={{width:12,height:12,borderRadius:'50%',background:l.color,opacity:0.7}}/>
+                                <span style={{fontFamily:FONT_SANS,fontSize:9,color:'#64748b'}}>{l.label}</span>
+                              </div>
+                            ))}
+                            <div style={{marginLeft:'auto',fontFamily:MONO,fontSize:8,color:'#334155'}}>NOAA+MODIS</div>
+                          </div>
+                        </>
+                      )
+                    })()}
+
+                    {!pfzData && !loadingPfz && (
+                      <div style={{fontFamily:FONT_SANS,fontSize:11,color:'#475569',textAlign:'center',padding:'12px 0'}}>
+                        Conectando con NOAA ERDDAP...
+                      </div>
+                    )}
+                  </div>
                 </div>
               </>
             )}
