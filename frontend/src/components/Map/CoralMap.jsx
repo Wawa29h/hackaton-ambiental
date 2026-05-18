@@ -34,10 +34,11 @@ const B     = '1px solid rgba(255,255,255,0.08)'  // border glass
 // ── Datos base de arrecifes (datos biológicos fijos + fallback) ──────────────
 // Los campos dinámicos (estado, dhw, sst, predicciones) se sobreescriben con la API
 const ZONAS_BASE = [
-  { id: 'los_cobanos',    nombre: 'Los Cóbanos',             pais: 'El Salvador', coords: [13.524,-89.807], cobertura: 4,  ocean:'pacific',   depth:'shallow', especies:['Porites lobata','Pocillopora damicornis','Pavona clavus'],                                                                          estado:'critico',  dhw:0,   sst:null, descripcion:'Único arrecife de El Salvador. Solo 4% de coral vivo.' },
-  { id: 'roatan',         nombre: 'Roatán — Cordelia Banks', pais: 'Honduras',    coords: [16.320,-86.535], cobertura: 18, ocean:'caribbean', depth:'shallow', especies:['Acropora cervicornis','Acropora palmata','Diploria labyrinthiformis','Montastraea cavernosa','Orbicella annularis'],              estado:'riesgo',   dhw:0.8, sst:null, descripcion:'Perdió cobertura del 46% al 18% en 2024.' },
-  { id: 'cozumel',        nombre: 'Cozumel',                 pais: 'México',      coords: [20.420,-86.922], cobertura: 22, ocean:'caribbean', depth:'deep',    especies:['Diploria labyrinthiformis','Orbicella annularis','Acropora palmata','Colpophyllia natans','Agaricia tenuifolia'],                estado:'moderado', dhw:0.9, sst:null, descripcion:'Arrecife del Caribe mexicano con alta biodiversidad.' },
-  { id: 'cayos_miskitos', nombre: 'Cayos Miskitos',          pais: 'Nicaragua',   coords: [14.380,-82.780], cobertura: 43, ocean:'caribbean', depth:'shallow', especies:['Pseudodiploria strigosa','Montastraea cavernosa','Orbicella faveolata','Agaricia agaricites','Porites astreoides'],              estado:'sano',     dhw:0.4, sst:null, descripcion:'El arrecife más saludable de Centroamérica. 43% de cobertura.' },
+  { id: 'los_cobanos',       nombre: 'Los Cóbanos',             pais: 'El Salvador', coords: [13.529,-89.814], cobertura: 4,  ocean:'pacific',   depth:'shallow', especies:['Porites lobata','Pocillopora damicornis','Pavona clavus'],                                                                              estado:'moderado', dhw:1.11, sst:30.52, descripcion:'Único arrecife de El Salvador. Solo 4% de coral vivo. SST 30.5°C — estrés térmico activo.' },
+  { id: 'barra_santiago',    nombre: 'Barra de Santiago',       pais: 'El Salvador', coords: [13.682,-90.041], cobertura: 12, ocean:'pacific',   depth:'shallow', especies:['Porites lobata','Pavona gigantea','Pocillopora damicornis','Gardineroseris planulata'],                                              estado:'sano',     dhw:0.31, sst:30.37, descripcion:'Reserva de Biosfera del Pacífico salvadoreño. Corales en roca volcánica, manglares y pastos marinos.' },
+  { id: 'roatan',            nombre: 'Roatán — Cordelia Banks', pais: 'Honduras',    coords: [16.326,-86.538], cobertura: 18, ocean:'caribbean', depth:'shallow', especies:['Acropora cervicornis','Acropora palmata','Diploria labyrinthiformis','Montastraea cavernosa','Orbicella annularis'],                  estado:'sano',     dhw:0,    sst:28.54, descripcion:'Perdió cobertura del 46% al 18% en 2024. Actualmente sin estrés térmico.' },
+  { id: 'cozumel',           nombre: 'Cozumel',                 pais: 'México',      coords: [20.420,-86.922], cobertura: 22, ocean:'caribbean', depth:'deep',    especies:['Diploria labyrinthiformis','Orbicella annularis','Acropora palmata','Colpophyllia natans','Agaricia tenuifolia'],                    estado:'moderado', dhw:0.9,  sst:null,  descripcion:'Arrecife del Caribe mexicano con alta biodiversidad.' },
+  { id: 'cayos_miskitos',    nombre: 'Cayos Miskitos',          pais: 'Nicaragua',   coords: [14.380,-82.780], cobertura: 43, ocean:'caribbean', depth:'shallow', especies:['Pseudodiploria strigosa','Montastraea cavernosa','Orbicella faveolata','Agaricia agaricites','Porites astreoides'],                  estado:'sano',     dhw:0.4,  sst:null,  descripcion:'El arrecife más saludable de Centroamérica. 43% de cobertura.' },
 ]
 
 // Mapeo: slug de la API (/reefs) → id de zona en ZONAS_BASE
@@ -150,13 +151,36 @@ function createFishIcon(activo=false) {
 const STATUS_COLORS = {sano:BRAND.plum,moderado:BRAND.sand,riesgo:BRAND.clay,critico:BRAND.coral}
 const STATUS_LABELS = {sano:'Sano',moderado:'Estrés Térmico',riesgo:'En Riesgo',critico:'Blanqueamiento Severo'}
 function getDHWPorEstado(e){return e==='sano'?2:e==='moderado'?5:e==='riesgo'?9:13}
-function createGlowIcon(estado,activo=false){
-  const color=STATUS_COLORS[estado]??'#34d399',s=activo?34:26,inner=activo?14:10
-  return L.divIcon({className:'',iconSize:[s,s],iconAnchor:[s/2,s/2],popupAnchor:[0,-s/2-4],html:`
-    <div style="position:relative;width:${s}px;height:${s}px;display:flex;align-items:center;justify-content:center;">
-      <div style="position:absolute;inset:0;border:2px solid ${color};opacity:0.4;animation:pulse 2s infinite;border-radius:2px"></div>
-      <div style="width:${inner}px;height:${inner}px;background:${color};box-shadow:0 0 10px ${color},0 0 20px ${color}44"></div>
-    </div>`})
+function createGlowIcon(estado, activo=false){
+  const color = STATUS_COLORS[estado] ?? '#34d399'
+  const w = activo ? 32 : 26
+  const h = activo ? 42 : 34
+  // Waypoint SVG: pin con círculo interior y anillo de pulso si activo
+  const ring = activo
+    ? `<circle cx="${w/2}" cy="${h*0.38}" r="${w*0.44}" fill="none" stroke="${color}" stroke-width="1.5" opacity="0.35" style="animation:pulse 1.6s ease-out infinite"/>`
+    : ''
+  return L.divIcon({
+    className: '',
+    iconSize:    [w, h],
+    iconAnchor:  [w/2, h],
+    popupAnchor: [0, -h],
+    html: `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <filter id="glow-${estado}">
+          <feGaussianBlur stdDeviation="${activo?2.5:1.5}" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+      ${ring}
+      <!-- Cuerpo del pin -->
+      <path d="M${w/2} ${h-2} C${w/2} ${h-2} ${w*0.12} ${h*0.55} ${w*0.12} ${h*0.38}
+               A${w*0.38} ${w*0.38} 0 1 1 ${w*0.88} ${h*0.38}
+               C${w*0.88} ${h*0.55} ${w/2} ${h-2} ${w/2} ${h-2}Z"
+            fill="${color}" filter="url(#glow-${estado})" opacity="${activo?1:0.92}"/>
+      <!-- Círculo interior blanco -->
+      <circle cx="${w/2}" cy="${h*0.38}" r="${w*0.18}" fill="white" opacity="0.9"/>
+    </svg>`,
+  })
 }
 function MapReady(){const map=useMap();useEffect(()=>{setTimeout(()=>map.invalidateSize(),100)},[map]);return null}
 

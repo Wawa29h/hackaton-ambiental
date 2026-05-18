@@ -27,8 +27,20 @@ const REEF_CONFIG = {
     fogColor:   0x0a2a1a,
     clearColor: 0x041510,
     rockColor:  0x1a2a1f,
-    seaFanDensity:   0.4,  // pocos abanicos — Pacífico
+    seaFanDensity:   0.4,
     seagrassDensity: 0.5,
+  },
+  barra_santiago: {
+    emoji: '🇸🇻', pais: 'El Salvador', ocean: 'pacific',
+    indicatorSpecies: 'Pez Guitarrón',
+    fishColors: [0x34d399, 0x6ee7b7, 0xfbbf24, 0x60a5fa, 0xa3e635],
+    showTurtle: true, showManta: false, showParrotfish: false,
+    // Pacífico costero: agua verde-esmeralda, fondo rocoso volcánico con manglares
+    fogColor:   0x0d3320,
+    clearColor: 0x051a0f,
+    rockColor:  0x1a3320,
+    seaFanDensity:   0.6,
+    seagrassDensity: 1.2,  // abundante pasto marino — zona de manglar
   },
   roatan: {
     emoji: '🇭🇳', pais: 'Honduras', ocean: 'caribbean',

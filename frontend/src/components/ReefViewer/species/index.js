@@ -11,6 +11,8 @@ export { crearDiploria }      from './Diploria.js'
 export const ESPECIES_POR_ZONA = {
   // Los Cóbanos, El Salvador — Pacífico: Porites lobata + Pocillopora (arrecife crítico 4%)
   los_cobanos:    ['PoritesLobata', 'Pocillopora', 'PoritesLobata'],
+  // Barra de Santiago, El Salvador — Pacífico: Porites + Pocillopora en roca volcánica (12%)
+  barra_santiago: ['PoritesLobata', 'Pocillopora', 'PoritesLobata', 'Pocillopora'],
   // Roatán — Honduras: Acropora cervicornis + palmata + Diploria (18%)
   roatan:         ['Acropora', 'Acropora', 'Diploria', 'Acropora'],
   // Cozumel — México: Diploria + Acropora (profundo, 22%)
