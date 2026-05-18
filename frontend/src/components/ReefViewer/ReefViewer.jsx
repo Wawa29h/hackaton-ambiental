@@ -533,7 +533,10 @@ export default function ReefViewer({ zone, dhw, baa, especies: especiesProp, cob
         pez.position.x  = Math.sin(a) * radio
         pez.position.z  = Math.cos(a * 0.7) * radio
         pez.position.y  = alturaBase + Math.sin(t * 1.5 + oscY) * 0.6
-        pez.rotation.y  = Math.atan2(Math.cos(a), -Math.sin(a) * 0.7)
+        
+        const dx = Math.cos(a)
+        const dz = -Math.sin(a * 0.7) * 0.7
+        pez.rotation.y  = Math.atan2(-dz, dx)
       })
 
       // Tortuga
