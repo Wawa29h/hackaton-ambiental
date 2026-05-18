@@ -1340,7 +1340,7 @@ export default function CoralMap() {
 
         {/* Leyenda */}
         <div style={{
-          position:'absolute',bottom:16,right:16,zIndex:1000,
+          position:'absolute',top:16,right:16,zIndex:1000,
           background:'rgba(251,250,247,0.94)',backdropFilter:'blur(14px)',
           border:'1px solid rgba(43,20,84,0.14)',borderRadius:16,
           boxShadow:'0 18px 42px rgba(43,20,84,0.18)',
