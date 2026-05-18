@@ -290,6 +290,7 @@ export default function CoralMap() {
   const [zonasPesca,       setZonasPesca]       = useState(ZONAS_PESCA_FALLBACK)
   const [zonasReales,      setZonasReales]      = useState(ZONAS_BASE)
   const [apiOnline,        setApiOnline]        = useState(false)
+  const [alertaEstado,     setAlertaEstado]     = useState(null) // null | 'sending' | 'ok' | 'error'
   const [tab,              setTab]              = useState('arrecife')
   const [panelWidth,       setPanelWidth]       = useState(380)
   const [prediccionViva,   setPrediccionViva]   = useState(null)
@@ -471,6 +472,30 @@ export default function CoralMap() {
     }).catch(()=>{})
     return()=>{c=true}
   },[])
+
+  async function enviarAlertaMake() {
+    const webhookUrl = import.meta.env.VITE_MAKE_WEBHOOK
+    if (!webhookUrl) {
+      alert('Agrega VITE_MAKE_WEBHOOK en el .env del frontend')
+      return
+    }
+    setAlertaEstado('sending')
+    try {
+      const res  = await fetch(`${API_URL}/alerts/send-to-make`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ webhook_url: webhookUrl }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.detail ?? 'Error del servidor')
+      setAlertaEstado('ok')
+      setTimeout(() => setAlertaEstado(null), 4000)
+    } catch (e) {
+      console.error('[Make]', e)
+      setAlertaEstado('error')
+      setTimeout(() => setAlertaEstado(null), 4000)
+    }
+  }
 
   function abrirArrecife(z){
     setDiaPrediccion(0)
@@ -726,12 +751,42 @@ export default function CoralMap() {
           )}
         </div>
 
-        {/* Footer API status */}
-        <div style={{padding:'12px 16px',borderTop:'1px solid rgba(15,23,42,0.1)',display:'flex',alignItems:'center',gap:8,background:'rgba(255,255,255,0.72)'}}>
-          <span style={{width:8,height:8,borderRadius:'50%',background:apiOnline?BRAND.plum:BRAND.sand,display:'inline-block',animation:'blink 1.4s step-start infinite',boxShadow:`0 0 8px ${apiOnline?BRAND.plum:BRAND.sand}`}}/>
-          <span style={{fontFamily:FONT_SANS,fontWeight:800,fontSize:10,color:apiOnline?BRAND.ink:'#92400e',letterSpacing:'0.15em'}}>
-            {apiOnline?'API ONLINE':'CACHE LOCAL'}
-          </span>
+        {/* Footer API status + botón Make */}
+        <div style={{padding:'12px 16px',borderTop:'1px solid rgba(15,23,42,0.1)',background:'rgba(255,255,255,0.72)',display:'flex',flexDirection:'column',gap:10}}>
+          <div style={{display:'flex',alignItems:'center',gap:8}}>
+            <span style={{width:8,height:8,borderRadius:'50%',background:apiOnline?BRAND.plum:BRAND.sand,display:'inline-block',animation:'blink 1.4s step-start infinite',boxShadow:`0 0 8px ${apiOnline?BRAND.plum:BRAND.sand}`}}/>
+            <span style={{fontFamily:FONT_SANS,fontWeight:800,fontSize:10,color:apiOnline?BRAND.ink:'#92400e',letterSpacing:'0.15em'}}>
+              {apiOnline?'API ONLINE':'CACHE LOCAL'}
+            </span>
+          </div>
+
+          {/* Botón alerta Make */}
+          <button
+            onClick={enviarAlertaMake}
+            disabled={alertaEstado==='sending'}
+            style={{
+              width:'100%', padding:'10px 0',
+              background: alertaEstado==='ok'   ? '#dcfce7' :
+                          alertaEstado==='error' ? '#fee2e2' :
+                          alertaEstado==='sending'?'rgba(239,68,68,0.08)' :
+                          'rgba(239,68,68,0.1)',
+              border: `1.5px solid ${
+                alertaEstado==='ok'    ? '#86efac' :
+                alertaEstado==='error' ? '#fca5a5' : '#ef444466'}`,
+              borderRadius:12, cursor: alertaEstado==='sending'?'wait':'pointer',
+              fontFamily:FONT_SANS, fontWeight:800, fontSize:11,
+              color: alertaEstado==='ok'   ? '#166534' :
+                     alertaEstado==='error'? '#991b1b' : '#dc2626',
+              letterSpacing:'0.06em',
+              transition:'all 0.2s ease',
+              display:'flex', alignItems:'center', justifyContent:'center', gap:6,
+            }}>
+            {alertaEstado==='sending' && <span style={{width:8,height:8,borderRadius:'50%',background:'#dc2626',animation:'blink 0.6s step-start infinite',display:'inline-block'}}/>}
+            {alertaEstado==='ok'      ? '✅ Alertas enviadas'   :
+             alertaEstado==='error'   ? '❌ Error al enviar'    :
+             alertaEstado==='sending' ? 'Enviando...'           :
+             '🚨 Alertar Pescadores'}
+          </button>
         </div>
       </div>
 
