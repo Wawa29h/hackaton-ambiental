@@ -414,7 +414,7 @@ const TODAS_POSICIONES = Array.from({ length: MAX_POSICIONES }, (_, i) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // COMPONENTE PRINCIPAL
 // ─────────────────────────────────────────────────────────────────────────────
-export default function ReefViewer({ zone, dhw, baa, especies: especiesProp, cobertura, descripcion, showHud = true }) {
+export default function ReefViewer({ zone, dhw: dhwProp, baa, especies: especiesProp, cobertura, descripcion, showHud = true }) {
   const mountRef    = useRef(null)
   const sceneRef    = useRef(null)
   const clockRef    = useRef(null)
@@ -422,6 +422,16 @@ export default function ReefViewer({ zone, dhw, baa, especies: especiesProp, cob
   const rocasRef    = useRef([])
   const audioRef    = useRef(null) // Referencia para Bioacústica
   const [audioIniciado, setAudioIniciado] = useState(false)
+  
+  const controlsRef = useRef(null)
+  const [modoLibre, setModoLibre] = useState(false)
+  const [dhwLibre, setDhwLibre] = useState(dhwProp || 0)
+  const [autoRotate, setAutoRotate] = useState(false)
+  const [rotateSpeed, setRotateSpeed] = useState(1.0)
+  const autoRotateRef = useRef(false)
+  const rotateSpeedRef = useRef(1.0)
+
+  const dhw = modoLibre ? dhwLibre : dhwProp;
 
   // — grupos animados —
   const coralesRef  = useRef([])
@@ -474,6 +484,7 @@ export default function ReefViewer({ zone, dhw, baa, especies: especiesProp, cob
     controls.dampingFactor  = 0.08
     controls.target.set(0, 0, 0)
     controls.maxPolarAngle  = Math.PI / 2.1
+    controlsRef.current = controls;
 
     // Luces
     scene.add(new THREE.AmbientLight(0x1a4466, 2.2))
@@ -603,7 +614,11 @@ export default function ReefViewer({ zone, dhw, baa, especies: especiesProp, cob
         })
       })
 
-      controls.update()
+      if (controlsRef.current) {
+        controlsRef.current.autoRotate = autoRotateRef.current;
+        controlsRef.current.autoRotateSpeed = rotateSpeedRef.current * 2.0;
+        controlsRef.current.update();
+      }
       renderer.render(scene, camera)
     }
     animate()
@@ -825,6 +840,74 @@ export default function ReefViewer({ zone, dhw, baa, especies: especiesProp, cob
       {/* Pista de Audio Bioacústico (Placeholder). Reemplazar src con un mp3 real de ecosistema sano */}
       <audio ref={audioRef} loop src="https://actions.google.com/sounds/v1/water/underwater_bubbles.ogg" crossOrigin="anonymous" />
       
+      {/* ── Controles de Modo Libre y Cámara ── */}
+      <div style={{
+        position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)',
+        background: 'rgba(10,18,40,0.85)', backdropFilter: 'blur(8px)',
+        border: '1px solid rgba(6,182,212,0.4)', borderRadius: 12, padding: '10px 16px',
+        display: 'flex', gap: 16, alignItems: 'center', zIndex: 30,
+        boxShadow: '0 8px 32px rgba(0,0,0,0.5)', flexWrap: 'wrap', justifyContent: 'center'
+      }}>
+        {/* Toggle Modo Libre */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button 
+            onClick={() => {
+              setModoLibre(!modoLibre);
+              if (!modoLibre) setDhwLibre(dhwProp || 0);
+            }}
+            style={{
+              background: modoLibre ? '#ef4444' : 'rgba(255,255,255,0.1)',
+              border: `1px solid ${modoLibre ? '#fca5a5' : 'rgba(255,255,255,0.2)'}`,
+              color: '#fff', padding: '4px 8px', borderRadius: 6, cursor: 'pointer',
+              fontFamily: 'monospace', fontSize: 10, fontWeight: 'bold'
+            }}>
+            {modoLibre ? 'MODO LIBRE: ON' : 'MODO LIBRE: OFF'}
+          </button>
+        </div>
+
+        {/* Slider de Deterioro */}
+        {modoLibre && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, borderLeft: '1px solid rgba(255,255,255,0.2)', paddingLeft: 16 }}>
+            <span style={{ color: '#94a3b8', fontSize: 10, fontFamily: 'monospace' }}>DHW: {dhwLibre.toFixed(1)}</span>
+            <input 
+              type="range" min="0" max="30" step="0.5" 
+              value={dhwLibre} onChange={e => setDhwLibre(Number(e.target.value))}
+              style={{ width: 100, accentColor: '#ef4444' }} 
+            />
+          </div>
+        )}
+
+        {/* Controles de Cámara */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, borderLeft: '1px solid rgba(255,255,255,0.2)', paddingLeft: 16 }}>
+          <button 
+            onClick={() => {
+              setAutoRotate(!autoRotate);
+              autoRotateRef.current = !autoRotate;
+            }}
+            style={{
+              background: autoRotate ? '#3b82f6' : 'rgba(255,255,255,0.1)',
+              border: `1px solid ${autoRotate ? '#93c5fd' : 'rgba(255,255,255,0.2)'}`,
+              color: '#fff', padding: '4px 8px', borderRadius: 6, cursor: 'pointer',
+              fontFamily: 'monospace', fontSize: 10, fontWeight: 'bold'
+            }}>
+            {autoRotate ? 'ROTACIÓN: ON' : 'ROTACIÓN: OFF'}
+          </button>
+          
+          {autoRotate && (
+            <input 
+              type="range" min="0.5" max="5" step="0.5" 
+              value={rotateSpeed} onChange={e => {
+                const s = Number(e.target.value);
+                setRotateSpeed(s);
+                rotateSpeedRef.current = s;
+              }}
+              style={{ width: 80, accentColor: '#3b82f6' }} 
+              title="Velocidad de rotación"
+            />
+          )}
+        </div>
+      </div>
+
       {/* Botón de Audio */}
       {showHud && (
       <button 
